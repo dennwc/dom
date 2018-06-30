@@ -35,9 +35,9 @@ func (e *NodeBase) JSValue() js.Value {
 	return e.v
 }
 
-func (e *NodeBase) AddEventListener(typ string, fnc func(e Event)) {
+func (e *NodeBase) AddEventListener(typ string, h EventHandler) {
 	e.v.Call("addEventListener", typ, js.NewEventCallback(0, func(v js.Value) {
-		fnc(convertEvent(v))
+		h(convertEvent(v))
 	}))
 }
 

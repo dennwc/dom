@@ -7,7 +7,7 @@ import (
 
 type EventTarget interface {
 	Value
-	AddEventListener(typ string, fnc func(e Event))
+	AddEventListener(typ string, h EventHandler)
 	// TODO: removeEventListener
 	// TODO: dispatchEvent
 }
@@ -24,6 +24,8 @@ type Event interface {
 	IsTrusted() bool
 	Path() NodeList
 }
+
+type EventHandler func(Event)
 
 type EventConstructor func(e BaseEvent) Event
 

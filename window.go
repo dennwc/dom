@@ -20,9 +20,9 @@ func (w *Window) JSValue() js.Value {
 	return w.v
 }
 
-func (w *Window) AddEventListener(typ string, fnc func(e Event)) {
+func (w *Window) AddEventListener(typ string, h EventHandler) {
 	w.v.Call("addEventListener", typ, js.NewEventCallback(0, func(v js.Value) {
-		fnc(convertEvent(v))
+		h(convertEvent(v))
 	}))
 }
 
