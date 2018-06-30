@@ -7,16 +7,28 @@ import (
 
 var _ Node = (*Element)(nil)
 
+func AsElement(v js.Value) *Element {
+	if !IsValid(v) {
+		return nil
+	}
+	return &Element{NodeBase{v}}
+}
+
+func AsNodeList(v js.Value) NodeList {
+	if !IsValid(v) {
+		return nil
+	}
+	arr := make(NodeList, v.Length())
+	for i := range arr {
+		arr[i] = AsElement(v.Index(i))
+	}
+	return arr
+}
+
+var _ Node = (*Element)(nil)
+
 type Element struct {
-	v js.Value
-}
-
-func (e *Element) JSValue() js.Value {
-	return e.v
-}
-
-func (e *Element) AppendChild(n Node) {
-	e.v.Call("appendChild", n.JSValue())
+	NodeBase
 }
 
 func (e *Element) SetInnerHTML(s string) {

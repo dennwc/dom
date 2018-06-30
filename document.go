@@ -1,32 +1,36 @@
 package dom
 
-import "syscall/js"
-
 func GetDocument() *Document {
-	doc := js.Global().Get("document")
-	if doc == js.Null() || doc == js.Undefined() {
-		panic("no document")
+	doc := global.Get("document")
+	if !IsValid(doc) {
+		return nil
 	}
-	return &Document{v: doc}
+	return &Document{NodeBase{doc}}
 }
 
+var _ Node = (*Document)(nil)
+
 type Document struct {
-	v js.Value
+	NodeBase
 }
 
 func (d *Document) CreateElement(tag string) *Element {
 	v := d.v.Call("createElement", tag)
-	return &Element{v: v}
+	return AsElement(v)
 }
 func (d *Document) CreateElementNS(ns string, tag string) *Element {
 	v := d.v.Call("createElementNS", ns, tag)
-	return &Element{v: v}
+	return AsElement(v)
 }
-func (d *Document) GetElementsByTagName(tag string) []*Element {
+func (d *Document) GetElementsByTagName(tag string) NodeList {
 	v := d.v.Call("getElementsByTagName", tag)
-	arr := make([]*Element, v.Length())
-	for i := range arr {
-		arr[i] = &Element{v: v.Index(i)}
-	}
-	return arr
+	return AsNodeList(v)
+}
+func (d *Document) QuerySelector(qu string) *Element {
+	v := d.v.Call("querySelector", qu)
+	return AsElement(v)
+}
+func (d *Document) QuerySelectorAll(qu string) NodeList {
+	v := d.v.Call("querySelectorAll", qu)
+	return AsNodeList(v)
 }

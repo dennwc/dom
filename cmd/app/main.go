@@ -4,10 +4,15 @@ package main
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/dennwc/dom"
 	"github.com/dennwc/dom/svg"
-	"time"
 )
+
+func init() {
+	dom.Body.Style().SetMarginsRaw("0")
+}
 
 func main() {
 	fmt.Println("running")
@@ -18,6 +23,14 @@ func main() {
 		r3   = 40
 	)
 	root := svg.New(dom.Perc(100), dom.Vh(99))
+
+	handler := func(e dom.Event) {
+		dom.ConsoleLog(e)
+		fmt.Printf("event: %T %v\n", e, e.JSValue())
+	}
+
+	root.DOMElement().AddEventListener("click", handler)
+	dom.GetWindow().OnResize(handler)
 
 	center := root.NewG()
 	center.Translate(w/2, h/2)
