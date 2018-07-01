@@ -5,10 +5,12 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/dennwc/dom"
+	"github.com/dennwc/dom/storage"
 	"github.com/dennwc/dom/svg"
 )
 
@@ -45,13 +47,20 @@ func main() {
 		G       *svg.G
 		HPeriod float64
 	}
+	type JSat struct {
+		R    float64 `json:"r"`
+		Orb  float64 `json:"orb"`
+		HPer float64 `json:"hper"`
+		Text string  `json:"text"`
+	}
 
 	var (
+		stor = storage.Local()
 		mu   sync.Mutex
 		sats []Sat
 	)
 
-	addSat := func(r, orb, hper float64, s string) {
+	addSatRaw := func(r, orb, hper float64, s string) {
 		g := center.NewG()
 		g.NewCircle(int(r)).Translate(orb, 0)
 		g.NewLine().SetPos(0, 0, int(orb), 0)
@@ -62,6 +71,16 @@ func main() {
 		sats = append(sats, Sat{G: g, HPeriod: hper})
 		mu.Unlock()
 	}
+	addSat := func(r, orb, hper float64, s string) {
+		if stor != nil {
+			sat := JSat{R: r, Orb: orb, HPer: hper, Text: s}
+			id := strconv.Itoa(stor.Length() + 1)
+			if err := storage.SetItemJSON(stor, id, sat); err != nil {
+				panic(err)
+			}
+		}
+		addSatRaw(r, orb, hper, s)
+	}
 
 	btn.OnClick(func(_ dom.Event) {
 		txt := inp.Value()
@@ -70,8 +89,21 @@ func main() {
 		addSat(7, r, hper, txt)
 	})
 
-	addSat(5, 27, 1.5, "A")
-	addSat(5, 40, 2.5, "B")
+	if stor != nil {
+		for i := 0; i < stor.Length(); i++ {
+			key := stor.Key(i)
+			var s JSat
+			if err := storage.GetItemJSON(stor, key, &s); err != nil {
+				panic(err)
+			}
+			addSatRaw(s.R, s.Orb, s.HPer, s.Text)
+		}
+	}
+
+	if len(sats) == 0 {
+		addSat(5, 27, 1.5, "A")
+		addSat(5, 40, 2.5, "B")
+	}
 
 	start := time.Now()
 	const interval = time.Millisecond * 30
