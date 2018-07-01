@@ -1,13 +1,13 @@
-// +build !wasm
-
 package main
 
 import (
 	"flag"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -18,27 +18,34 @@ var (
 	directory = flag.String("d", ".", "the directory of static file to host")
 )
 
-const appName = "app"
+const defaultAppName = "app"
+
+var indexTmpl = template.Must(template.New("index").Parse(indexHTML))
 
 func main() {
 	flag.Parse()
 
 	h := http.FileServer(http.Dir(*directory))
 
-	http.Handle("/", buildHandler{h: h})
+	http.Handle("/", buildHandler{h: h, dir: *directory})
 
 	log.Printf("serving %q on %q\n", *directory, *host)
 	log.Fatal(http.ListenAndServe(*host, nil))
 }
 
 type buildHandler struct {
-	h http.Handler
+	h   http.Handler
+	dir string
+}
+
+func (h buildHandler) appPath(name string) string {
+	return filepath.Join(h.dir, "cmd", name, "main.go")
 }
 
 func (h buildHandler) buildWASM(name string) {
 	cmd := exec.Command("go", "build",
-		"-o", filepath.Join(*directory, name+".wasm"),
-		filepath.Join(*directory, "cmd", name, "main.go"),
+		"-o", filepath.Join(h.dir, name+".wasm"),
+		h.appPath(name),
 	)
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env,
@@ -60,16 +67,34 @@ var modTime = time.Now()
 
 func (h buildHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.Method, r.URL.Path)
-	switch r.URL.Path {
-	case "/", "/index.html":
-		http.ServeContent(w, r, "index.html", modTime, strings.NewReader(indexHTML))
-		return
+	rpath := r.URL.Path
+	if rpath == "/" {
+		rpath = "/index.html"
+	}
+	switch rpath {
 	case "/" + execName:
 		http.ServeContent(w, r, execName, modTime, strings.NewReader(wasmExecJS))
 		return
 	}
-	if strings.HasSuffix(r.URL.Path, ".wasm") {
-		h.buildWASM(strings.TrimSuffix(r.URL.Path, ".wasm"))
+	switch ext := path.Ext(rpath); ext {
+	case "", ".html":
+		appName := defaultAppName
+		if rpath != "/index.html" {
+			appName = strings.Trim(strings.TrimSuffix(rpath, ext), "/")
+		}
+		if _, err := os.Stat(h.appPath(appName)); err == nil {
+			err = indexTmpl.Execute(w, struct {
+				AppName string
+			}{
+				AppName: appName,
+			})
+			if err != nil {
+				log.Println(err)
+			}
+			return
+		}
+	case ".wasm":
+		h.buildWASM(strings.TrimSuffix(r.URL.Path, ext))
 	}
 	h.h.ServeHTTP(w, r)
 }
@@ -88,7 +113,7 @@ license that can be found in the LICENSE file.
 
 <head>
 	<meta charset="utf-8">
-	<title>Go wasm</title>
+	<title>{{ .AppName }}</title>
 </head>
 
 <body>
@@ -102,7 +127,7 @@ license that can be found in the LICENSE file.
 		}
 
 		const go = new Go();
-		WebAssembly.instantiateStreaming(fetch("` + appName + `.wasm"), go.importObject).then(async (result) => {
+		WebAssembly.instantiateStreaming(fetch("{{ .AppName }}.wasm"), go.importObject).then(async (result) => {
 			let mod = result.module;
 			let inst = result.instance;
 			// run
