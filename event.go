@@ -2,7 +2,7 @@ package dom
 
 import (
 	"fmt"
-	"syscall/js"
+	"github.com/dennwc/dom/js"
 )
 
 type EventTarget interface {
@@ -30,8 +30,8 @@ type EventHandler func(Event)
 type EventConstructor func(e BaseEvent) Event
 
 func RegisterEventType(typ string, fnc EventConstructor) {
-	cl := global.Get(typ)
-	if cl == js.Null() || cl == js.Undefined() {
+	cl := js.Get(typ)
+	if !cl.Valid() {
 		panic(fmt.Errorf("class undefined: %q", typ))
 	}
 	eventClasses = append(eventClasses, eventClass{
@@ -96,8 +96,8 @@ func (e *BaseEvent) IsTrusted() bool {
 	return e.getBool("isTrusted")
 }
 
-func (e *BaseEvent) JSValue() js.Value {
-	return e.v
+func (e *BaseEvent) JSRef() js.Ref {
+	return e.v.JSRef()
 }
 
 func (e *BaseEvent) Type() string {

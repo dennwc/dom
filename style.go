@@ -1,6 +1,6 @@
 package dom
 
-import "syscall/js"
+import "github.com/dennwc/dom/js"
 
 type Style struct {
 	v js.Value

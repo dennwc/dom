@@ -1,6 +1,6 @@
 package dom
 
-import "syscall/js"
+import "github.com/dennwc/dom/js"
 
 type Node interface {
 	EventTarget
@@ -31,12 +31,12 @@ type NodeBase struct {
 	v js.Value
 }
 
-func (e *NodeBase) JSValue() js.Value {
-	return e.v
+func (e *NodeBase) JSRef() js.Ref {
+	return e.v.JSRef()
 }
 
 func (e *NodeBase) AddEventListener(typ string, h EventHandler) {
-	e.v.Call("addEventListener", typ, js.NewEventCallback(0, func(v js.Value) {
+	e.v.Call("addEventListener", typ, js.NewEventCallback(func(v js.Value) {
 		h(convertEvent(v))
 	}))
 }
@@ -70,25 +70,25 @@ func (e *NodeBase) SetTextContent(s string) {
 }
 
 func (e *NodeBase) AppendChild(n Node) {
-	e.v.Call("appendChild", n.JSValue())
+	e.v.Call("appendChild", n.JSRef())
 }
 
 func (e *NodeBase) Contains(n Node) bool {
-	return e.v.Call("contains", n.JSValue()).Bool()
+	return e.v.Call("contains", n.JSRef()).Bool()
 }
 
 func (e *NodeBase) IsEqualNode(n Node) bool {
-	return e.v.Call("isEqualNode", n.JSValue()).Bool()
+	return e.v.Call("isEqualNode", n.JSRef()).Bool()
 }
 
 func (e *NodeBase) IsSameNode(n Node) bool {
-	return e.v.Call("isSameNode", n.JSValue()).Bool()
+	return e.v.Call("isSameNode", n.JSRef()).Bool()
 }
 
 func (e *NodeBase) RemoveChild(n Node) Node {
-	return AsElement(e.v.Call("removeChild", n.JSValue()))
+	return AsElement(e.v.Call("removeChild", n.JSRef()))
 }
 
 func (e *NodeBase) ReplaceChild(n, old Node) Node {
-	return AsElement(e.v.Call("replaceChild", n.JSValue(), old.JSValue()))
+	return AsElement(e.v.Call("replaceChild", n.JSRef(), old.JSRef()))
 }

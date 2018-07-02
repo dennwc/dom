@@ -1,8 +1,10 @@
 package dom
 
+import "github.com/dennwc/dom/js"
+
 func GetDocument() *Document {
-	doc := global.Get("document")
-	if !IsValid(doc) {
+	doc := js.Get("document")
+	if !doc.Valid() {
 		return nil
 	}
 	return &Document{NodeBase{doc}}

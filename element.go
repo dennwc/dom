@@ -2,20 +2,20 @@ package dom
 
 import (
 	"fmt"
-	"syscall/js"
+	"github.com/dennwc/dom/js"
 )
 
 var _ Node = (*Element)(nil)
 
 func AsElement(v js.Value) *Element {
-	if !IsValid(v) {
+	if !v.Valid() {
 		return nil
 	}
 	return &Element{NodeBase{v}}
 }
 
 func AsNodeList(v js.Value) NodeList {
-	if !IsValid(v) {
+	if !v.Valid() {
 		return nil
 	}
 	arr := make(NodeList, v.Length())

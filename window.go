@@ -1,10 +1,10 @@
 package dom
 
-import "syscall/js"
+import "github.com/dennwc/dom/js"
 
 func GetWindow() *Window {
-	win := global.Get("window")
-	if !IsValid(win) {
+	win := js.Get("window")
+	if !win.Valid() {
 		return nil
 	}
 	return &Window{v: win}
@@ -16,12 +16,12 @@ type Window struct {
 	v js.Value
 }
 
-func (w *Window) JSValue() js.Value {
-	return w.v
+func (w *Window) JSRef() js.Ref {
+	return w.v.JSRef()
 }
 
 func (w *Window) AddEventListener(typ string, h EventHandler) {
-	w.v.Call("addEventListener", typ, js.NewEventCallback(0, func(v js.Value) {
+	w.v.Call("addEventListener", typ, js.NewEventCallback(func(v js.Value) {
 		h(convertEvent(v))
 	}))
 }

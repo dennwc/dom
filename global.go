@@ -1,31 +1,14 @@
 package dom
 
-import "syscall/js"
-
-var (
-	global    = js.Global()
-	null      = js.Null()
-	undefined = js.Undefined()
-)
+import "github.com/dennwc/dom/js"
 
 var (
 	Doc  = GetDocument()
 	Body = Doc.GetElementsByTagName("body")[0]
 )
 
-type Value interface {
-	JSValue() js.Value
-}
-
-func IsValid(v js.Value) bool {
-	return v != null && v != undefined
-}
+type Value = js.JSRef
 
 func ConsoleLog(args ...interface{}) {
-	for i, a := range args {
-		if v, ok := a.(Value); ok {
-			args[i] = v.JSValue()
-		}
-	}
-	global.Get("console").Call("log", args...)
+	js.Get("console").Call("log", args...)
 }
