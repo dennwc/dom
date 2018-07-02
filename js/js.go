@@ -45,7 +45,12 @@ type Value struct {
 func (v Value) JSRef() Ref {
 	return v.Ref
 }
-
+func (v Value) String() string {
+	if !v.Valid() {
+		return ""
+	}
+	return v.Ref.String()
+}
 func (v Value) IsNull() bool {
 	return v.Ref == null
 }
