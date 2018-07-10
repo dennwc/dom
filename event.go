@@ -112,19 +112,25 @@ func (e *BaseEvent) Path() NodeList {
 	return AsNodeList(e.v.Get("path"))
 }
 
+type MouseEventHandler func(*MouseEvent)
+
 type MouseEvent struct {
 	BaseEvent
 }
 
-func (e *MouseEvent) getPos(nameX, nameY string) (x, y float64) {
-	x = e.v.Get(nameX).Float()
-	y = e.v.Get(nameY).Float()
-	return
+func (e *MouseEvent) getPos(nameX, nameY string) Point {
+	x := e.v.Get(nameX).Int()
+	y := e.v.Get(nameY).Int()
+	return Point{X: x, Y: y}
 }
 
-func (e *MouseEvent) getPosPref(pref string) (x, y float64) {
+func (e *MouseEvent) getPosPref(pref string) Point {
 	return e.getPos(pref+"X", pref+"Y")
 }
+
+const (
+	MouseLeft = MouseButton(0)
+)
 
 type MouseButton int
 
@@ -132,19 +138,19 @@ func (e *MouseEvent) Button() MouseButton {
 	return MouseButton(e.v.Get("button").Int())
 }
 
-func (e *MouseEvent) ClientPos() (x, y float64) {
+func (e *MouseEvent) ClientPos() Point {
 	return e.getPosPref("client")
 }
 
-func (e *MouseEvent) OffsetPos() (x, y float64) {
+func (e *MouseEvent) OffsetPos() Point {
 	return e.getPosPref("offset")
 }
 
-func (e *MouseEvent) PagePos() (x, y float64) {
+func (e *MouseEvent) PagePos() Point {
 	return e.getPosPref("page")
 }
 
-func (e *MouseEvent) ScreenPos() (x, y float64) {
+func (e *MouseEvent) ScreenPos() Point {
 	return e.getPosPref("screen")
 }
 

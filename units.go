@@ -19,16 +19,22 @@ type Unit interface {
 	String() string
 }
 
+type Auto struct{}
+
+func (Auto) String() string {
+	return "auto"
+}
+
 type Px int
 
 func (v Px) String() string {
 	return strconv.Itoa(int(v)) + "px"
 }
 
-type Em int
+type Em float64
 
 func (v Em) String() string {
-	return strconv.Itoa(int(v)) + "em"
+	return strconv.FormatFloat(float64(v), 'g', -1, 64) + "em"
 }
 
 type Rem int

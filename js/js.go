@@ -66,6 +66,9 @@ func (v Value) Get(name string) Value {
 func (v Value) Set(name string, val interface{}) {
 	v.Ref.Set(name, toJS(val))
 }
+func (v Value) Del(name string) {
+
+}
 func (v Value) Index(i int) Value {
 	return Value{v.Ref.Index(i)}
 }
@@ -118,7 +121,11 @@ func NewCallback(fnc func(v []Value)) Callback {
 }
 
 func NewEventCallback(fnc func(v Value)) Callback {
-	return js.NewEventCallback(0, func(ref js.Value) {
+	return NewEventCallbackFlags(0, fnc)
+}
+
+func NewEventCallbackFlags(flags int, fnc func(v Value)) Callback {
+	return js.NewEventCallback(js.EventCallbackFlag(flags), func(ref js.Value) {
 		fnc(Value{ref})
 	})
 }

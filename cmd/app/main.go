@@ -23,7 +23,7 @@ func main() {
 
 	handler := func(e dom.Event) {
 		dom.ConsoleLog(e)
-		fmt.Printf("event: %T %v\n", e, e.JSValue())
+		fmt.Printf("event: %T %v\n", e, e.JSRef())
 	}
 
 	inp := dom.Doc.NewInput("text")
@@ -37,7 +37,7 @@ func main() {
 		w, h = 300, 300
 		pad  = 12
 	)
-	root := svg.New(dom.Perc(100), dom.Px(h))
+	root := svg.NewFullscreen()
 
 	center := root.NewG()
 	center.Translate(w/2, h/2)
@@ -63,7 +63,7 @@ func main() {
 	addSatRaw := func(r, orb, hper float64, s string) {
 		g := center.NewG()
 		g.NewCircle(int(r)).Translate(orb, 0)
-		g.NewLine().SetPos(0, 0, int(orb), 0)
+		g.NewLine().SetPos(dom.Point{0, 0}, dom.Point{int(orb), 0})
 		if s != "" {
 			g.NewText(s).Translate(orb+pad, 0)
 		}

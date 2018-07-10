@@ -7,7 +7,7 @@ func GetDocument() *Document {
 	if !doc.Valid() {
 		return nil
 	}
-	return &Document{NodeBase{doc}}
+	return &Document{NodeBase{v: doc}}
 }
 
 var _ Node = (*Document)(nil)

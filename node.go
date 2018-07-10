@@ -28,17 +28,31 @@ type Node interface {
 type NodeList []*Element
 
 type NodeBase struct {
-	v js.Value
+	v         js.Value
+	callbacks []js.Callback
 }
 
 func (e *NodeBase) JSRef() js.Ref {
 	return e.v.JSRef()
 }
 
-func (e *NodeBase) AddEventListener(typ string, h EventHandler) {
-	e.v.Call("addEventListener", typ, js.NewEventCallback(func(v js.Value) {
+func (e *NodeBase) Remove() {
+	e.ParentNode().RemoveChild(e)
+	for _, c := range e.callbacks {
+		c.Close()
+	}
+	e.callbacks = nil
+}
+
+func (e *NodeBase) AddEventListenerFlags(typ string, flags int, h EventHandler) {
+	cb := js.NewEventCallbackFlags(flags, func(v js.Value) {
 		h(convertEvent(v))
-	}))
+	})
+	e.callbacks = append(e.callbacks, cb)
+	e.v.Call("addEventListener", typ, cb)
+}
+func (e *NodeBase) AddEventListener(typ string, h EventHandler) {
+	e.AddEventListenerFlags(typ, 0, h)
 }
 
 func (e *NodeBase) BaseURI() string {

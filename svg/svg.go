@@ -22,6 +22,10 @@ func New(w, h dom.Unit) *SVG {
 	return &SVG{*e}
 }
 
+func NewFullscreen() *SVG {
+	return New(dom.Perc(100), dom.Vh(98))
+}
+
 type Element struct {
 	e *dom.Element
 }
@@ -42,6 +46,18 @@ func (e *Element) Transform(arr ...Transform) {
 func (e *Element) Translate(x, y float64) {
 	e.Transform(Translate{X: x, Y: y})
 }
+func (e *Element) OnClick(h dom.MouseEventHandler) {
+	e.e.OnClick(h)
+}
+func (e *Element) OnMouseDown(h dom.MouseEventHandler) {
+	e.e.OnMouseDown(h)
+}
+func (e *Element) OnMouseMove(h dom.MouseEventHandler) {
+	e.e.OnMouseMove(h)
+}
+func (e *Element) OnMouseUp(h dom.MouseEventHandler) {
+	e.e.OnMouseUp(h)
+}
 
 type Container struct {
 	Element
@@ -50,6 +66,14 @@ type Container struct {
 func (c *Container) NewCircle(r int) *Circle {
 	ci := &Circle{*NewElement("circle")}
 	ci.SetR(r)
+	c.e.AppendChild(ci.DOMElement())
+	return ci
+}
+func (c *Container) NewRect(w, h int) *Rect {
+	ci := &Rect{*NewElement("rect")}
+	if w != 0 || h != 0 {
+		ci.SetSize(w, h)
+	}
 	c.e.AppendChild(ci.DOMElement())
 	return ci
 }
@@ -97,6 +121,35 @@ func (c *Circle) SetPos(x, y int) {
 	c.SetAttribute("cx", x)
 	c.SetAttribute("cy", y)
 }
+func (c *Circle) Fill(cl dom.Color) {
+	c.SetAttribute("fill", string(cl))
+}
+func (c *Circle) Stroke(cl dom.Color) {
+	c.SetAttribute("stroke", string(cl))
+}
+
+type Rect struct {
+	Element
+}
+
+func (c *Rect) SetPos(x, y int) {
+	c.SetAttribute("x", x)
+	c.SetAttribute("y", y)
+}
+func (c *Rect) SetSize(w, h int) {
+	c.SetAttribute("width", w)
+	c.SetAttribute("height", h)
+}
+func (c *Rect) SetRound(rx, ry int) {
+	c.SetAttribute("rx", rx)
+	c.SetAttribute("ry", ry)
+}
+func (c *Rect) Fill(cl dom.Color) {
+	c.SetAttribute("fill", string(cl))
+}
+func (c *Rect) Stroke(cl dom.Color) {
+	c.SetAttribute("stroke", string(cl))
+}
 
 type Line struct {
 	Element
@@ -105,17 +158,17 @@ type Line struct {
 func (l *Line) SetStrokeWidth(w float64) {
 	l.SetAttribute("stroke-width", w)
 }
-func (l *Line) SetPos1(x, y int) {
-	l.SetAttribute("x1", x)
-	l.SetAttribute("y1", y)
+func (l *Line) SetPos1(p dom.Point) {
+	l.SetAttribute("x1", p.X)
+	l.SetAttribute("y1", p.Y)
 }
-func (l *Line) SetPos2(x, y int) {
-	l.SetAttribute("x2", x)
-	l.SetAttribute("y2", y)
+func (l *Line) SetPos2(p dom.Point) {
+	l.SetAttribute("x2", p.X)
+	l.SetAttribute("y2", p.Y)
 }
-func (l *Line) SetPos(x1, y1, x2, y2 int) {
-	l.SetPos1(x1, y1)
-	l.SetPos2(x2, y2)
+func (l *Line) SetPos(p1, p2 dom.Point) {
+	l.SetPos1(p1)
+	l.SetPos2(p2)
 }
 
 type Text struct {
@@ -128,6 +181,21 @@ func (t *Text) SetText(s string) {
 func (t *Text) SetPos(x, y int) {
 	t.SetAttribute("x", x)
 	t.SetAttribute("y", y)
+}
+func (t *Text) SetDPos(dx, dy dom.Unit) {
+	if dx != nil {
+		t.SetAttribute("dx", dx.String())
+	}
+	if dy != nil {
+		t.SetAttribute("dy", dy.String())
+	}
+}
+func (t *Text) Selectable(v bool) {
+	if !v {
+		t.Style().Set("user-select", "none")
+	} else {
+		t.Style().Set("user-select", "auto")
+	}
 }
 
 type Transform interface {
