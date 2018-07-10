@@ -43,8 +43,9 @@ func (h buildHandler) appPath(name string) string {
 }
 
 func (h buildHandler) buildWASM(name string) {
+	dst := filepath.Join(h.dir, name+".wasm")
 	cmd := exec.Command("go", "build",
-		"-o", filepath.Join(h.dir, name+".wasm"),
+		"-o", dst,
 		h.appPath(name),
 	)
 	cmd.Env = os.Environ()
@@ -56,6 +57,7 @@ func (h buildHandler) buildWASM(name string) {
 	out, err := cmd.CombinedOutput()
 	dt := time.Since(start)
 	if err != nil {
+		os.Remove(dst)
 		log.Println(err)
 		log.Println("logs:\n" + string(out))
 	} else {
