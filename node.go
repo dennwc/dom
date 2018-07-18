@@ -39,7 +39,7 @@ func (e *NodeBase) JSRef() js.Ref {
 func (e *NodeBase) Remove() {
 	e.ParentNode().RemoveChild(e)
 	for _, c := range e.callbacks {
-		c.Close()
+		c.Release()
 	}
 	e.callbacks = nil
 }

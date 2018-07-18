@@ -1,1 +1,3 @@
-*.wasm
+*.wasmcmd/app/app
+app.wasm
+/cmd/app/app
