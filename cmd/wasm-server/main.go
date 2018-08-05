@@ -132,15 +132,103 @@ license that can be found in the LICENSE file.
 		WebAssembly.instantiateStreaming(fetch("{{ .AppName }}.wasm"), go.importObject).then(async (result) => {
 			let mod = result.module;
 			let inst = result.instance;
+
+			let spin = document.getElementById('spin');
+			spin.parentNode.removeChild(spin);
+
 			// run
 			await go.run(inst);
-			inst = await WebAssembly.instantiate(mod, go.importObject); // reset instance
+			// reset instance
+			// inst = await WebAssembly.instantiate(mod, go.importObject);
 		});
 	</script>
+	<style>` + spinCSS + `</style>
+	<div id="spin">
+		<div class="sk-cube-grid">
+			<div class="sk-cube sk-cube1"></div>
+			<div class="sk-cube sk-cube2"></div>
+			<div class="sk-cube sk-cube3"></div>
+			<div class="sk-cube sk-cube4"></div>
+			<div class="sk-cube sk-cube5"></div>
+			<div class="sk-cube sk-cube6"></div>
+			<div class="sk-cube sk-cube7"></div>
+			<div class="sk-cube sk-cube8"></div>
+			<div class="sk-cube sk-cube9"></div>
+		</div>
+		<div class="sk-text">Loading...</div>
+	</div>
 </body>
 
 </html>
 `
+
+const spinCSS = `.sk-cube-grid {
+  width: 40px;
+  height: 40px;
+  margin: 100px auto 20px auto;
+}
+
+.sk-text {
+  font-family: Arial, Helvetica, sans-serif;
+  text-align: center;
+  margin: 0 auto 30px auto;
+}
+
+.sk-cube-grid .sk-cube {
+  width: 33%;
+  height: 33%;
+  background-color: #333;
+  float: left;
+  -webkit-animation: sk-cubeGridScaleDelay 1.3s infinite ease-in-out;
+          animation: sk-cubeGridScaleDelay 1.3s infinite ease-in-out; 
+}
+.sk-cube-grid .sk-cube1 {
+  -webkit-animation-delay: 0.2s;
+          animation-delay: 0.2s; }
+.sk-cube-grid .sk-cube2 {
+  -webkit-animation-delay: 0.3s;
+          animation-delay: 0.3s; }
+.sk-cube-grid .sk-cube3 {
+  -webkit-animation-delay: 0.4s;
+          animation-delay: 0.4s; }
+.sk-cube-grid .sk-cube4 {
+  -webkit-animation-delay: 0.1s;
+          animation-delay: 0.1s; }
+.sk-cube-grid .sk-cube5 {
+  -webkit-animation-delay: 0.2s;
+          animation-delay: 0.2s; }
+.sk-cube-grid .sk-cube6 {
+  -webkit-animation-delay: 0.3s;
+          animation-delay: 0.3s; }
+.sk-cube-grid .sk-cube7 {
+  -webkit-animation-delay: 0s;
+          animation-delay: 0s; }
+.sk-cube-grid .sk-cube8 {
+  -webkit-animation-delay: 0.1s;
+          animation-delay: 0.1s; }
+.sk-cube-grid .sk-cube9 {
+  -webkit-animation-delay: 0.2s;
+          animation-delay: 0.2s; }
+
+@-webkit-keyframes sk-cubeGridScaleDelay {
+  0%, 70%, 100% {
+    -webkit-transform: scale3D(1, 1, 1);
+            transform: scale3D(1, 1, 1);
+  } 35% {
+    -webkit-transform: scale3D(0, 0, 1);
+            transform: scale3D(0, 0, 1); 
+  }
+}
+
+@keyframes sk-cubeGridScaleDelay {
+  0%, 70%, 100% {
+    -webkit-transform: scale3D(1, 1, 1);
+            transform: scale3D(1, 1, 1);
+  } 35% {
+    -webkit-transform: scale3D(0, 0, 1);
+            transform: scale3D(0, 0, 1);
+  } 
+}`
 
 const wasmExecJS = `// Copyright 2018 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
@@ -171,7 +259,13 @@ const wasmExecJS = `// Copyright 2018 The Go Authors. All rights reserved.
 		global.TextEncoder = util.TextEncoder;
 		global.TextDecoder = util.TextDecoder;
 	} else {
-		window.global = window;
+		if (typeof window !== "undefined") {
+			window.global = window;
+		} else if (typeof self !== "undefined") {
+			self.global = self;
+		} else {
+			throw new Error("cannot export Go (neither window nor self is defined)");
+		}
 
 		let outputBuf = "";
 		global.fs = {
@@ -235,9 +329,11 @@ const wasmExecJS = `// Copyright 2018 The Go Authors. All rights reserved.
 			}
 
 			const storeValue = (addr, v) => {
+				const nanHead = 0x7FF80000;
+
 				if (typeof v === "number") {
 					if (isNaN(v)) {
-						mem().setUint32(addr + 4, 0x7FF80000, true); // NaN
+						mem().setUint32(addr + 4, nanHead, true);
 						mem().setUint32(addr, 0, true);
 						return;
 					}
@@ -245,51 +341,44 @@ const wasmExecJS = `// Copyright 2018 The Go Authors. All rights reserved.
 					return;
 				}
 
-				mem().setUint32(addr + 4, 0x7FF80000, true); // NaN
-
 				switch (v) {
 					case undefined:
+						mem().setUint32(addr + 4, nanHead, true);
 						mem().setUint32(addr, 1, true);
 						return;
 					case null:
+						mem().setUint32(addr + 4, nanHead, true);
 						mem().setUint32(addr, 2, true);
 						return;
 					case true:
+						mem().setUint32(addr + 4, nanHead, true);
 						mem().setUint32(addr, 3, true);
 						return;
 					case false:
+						mem().setUint32(addr + 4, nanHead, true);
 						mem().setUint32(addr, 4, true);
 						return;
 				}
 
-				if (typeof v === "string") {
-					let ref = this._stringRefs.get(v);
-					if (ref === undefined) {
-						ref = this._values.length;
-						this._values.push(v);
-						this._stringRefs.set(v, ref);
-					}
-					mem().setUint32(addr, ref, true);
-					return;
-				}
-
-				if (typeof v === "symbol") {
-					let ref = this._symbolRefs.get(v);
-					if (ref === undefined) {
-						ref = this._values.length;
-						this._values.push(v);
-						this._symbolRefs.set(v, ref);
-					}
-					mem().setUint32(addr, ref, true);
-					return;
-				}
-
-				let ref = v[this._refProp];
+				let ref = this._refs.get(v);
 				if (ref === undefined) {
 					ref = this._values.length;
 					this._values.push(v);
-					v[this._refProp] = ref;
+					this._refs.set(v, ref);
 				}
+				let typeFlag = 0;
+				switch (typeof v) {
+					case "string":
+						typeFlag = 1;
+						break;
+					case "symbol":
+						typeFlag = 2;
+						break;
+					case "function":
+						typeFlag = 3;
+						break;
+				}
+				mem().setUint32(addr + 4, nanHead | typeFlag, true);
 				mem().setUint32(addr, ref, true);
 			}
 
@@ -320,8 +409,12 @@ const wasmExecJS = `// Copyright 2018 The Go Authors. All rights reserved.
 				go: {
 					// func wasmExit(code int32)
 					"runtime.wasmExit": (sp) => {
+						const code = mem().getInt32(sp + 8, true);
 						this.exited = true;
-						this.exit(mem().getInt32(sp + 8, true));
+						delete this._inst;
+						delete this._values;
+						delete this._refs;
+						this.exit(code);
 					},
 
 					// func wasmWrite(fd uintptr, p unsafe.Pointer, n int32)
@@ -472,16 +565,10 @@ const wasmExecJS = `// Copyright 2018 The Go Authors. All rights reserved.
 				false,
 				global,
 				this._inst.exports.mem,
-				() => { // resolveCallbackPromise
-					if (this.exited) {
-						throw new Error("bad callback: Go program has already exited");
-					}
-					setTimeout(this._resolveCallbackPromise, 0); // make sure it is asynchronous
-				},
+				this,
 			];
-			this._stringRefs = new Map();
-			this._symbolRefs = new Map();
-			this._refProp = Symbol();
+			this._refs = new Map();
+			this._callbackShutdown = false;
 			this.exited = false;
 
 			const mem = new DataView(this._inst.exports.mem.buffer)
@@ -518,7 +605,12 @@ const wasmExecJS = `// Copyright 2018 The Go Authors. All rights reserved.
 
 			while (true) {
 				const callbackPromise = new Promise((resolve) => {
-					this._resolveCallbackPromise = resolve;
+					this._resolveCallbackPromise = () => {
+						if (this.exited) {
+							throw new Error("bad callback: Go program has already exited");
+						}
+						setTimeout(resolve, 0); // make sure it is asynchronous
+					};
 				});
 				this._inst.exports.run(argc, argv);
 				if (this.exited) {
@@ -540,17 +632,16 @@ const wasmExecJS = `// Copyright 2018 The Go Authors. All rights reserved.
 		go.env = process.env;
 		go.exit = process.exit;
 		WebAssembly.instantiate(fs.readFileSync(process.argv[2]), go.importObject).then((result) => {
-			process.on("exit", () => { // Node.js exits if no callback is pending
-				if (!go.exited) {
-					console.error("error: all goroutines asleep and no JavaScript callback pending - deadlock!");
-					process.exit(1);
+			process.on("exit", (code) => { // Node.js exits if no callback is pending
+				if (code === 0 && !go.exited) {
+					// deadlock, make Go print error and stack traces
+					go._callbackShutdown = true;
+					go._inst.exports.run();
 				}
 			});
 			return go.run(result.instance);
 		}).catch((err) => {
-			console.error(err);
-			go.exited = true;
-			process.exit(1);
+			throw err;
 		});
 	}
 })();
