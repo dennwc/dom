@@ -269,7 +269,7 @@ const wasmExecJS = `// Copyright 2018 The Go Authors. All rights reserved.
 
 		let outputBuf = "";
 		global.fs = {
-			constants: { O_WRONLY: -1, O_RDWR: -1, O_CREAT: -1, O_TRUNC: -1, O_APPEND: -1, O_EXCL: -1, O_NONBLOCK: -1, O_SYNC: -1 }, // unused
+			constants: { O_WRONLY: -1, O_RDWR: -1, O_CREAT: -1, O_TRUNC: -1, O_APPEND: -1, O_EXCL: -1 }, // unused
 			writeSync(fd, buf) {
 				outputBuf += decoder.decode(buf);
 				const nl = outputBuf.lastIndexOf("\n");
@@ -618,6 +618,28 @@ const wasmExecJS = `// Copyright 2018 The Go Authors. All rights reserved.
 				}
 				await callbackPromise;
 			}
+		}
+
+		static _makeCallbackHelper(id, pendingCallbacks, go) {
+			return function() {
+				pendingCallbacks.push({ id: id, args: arguments });
+				go._resolveCallbackPromise();
+			};
+		}
+
+		static _makeEventCallbackHelper(preventDefault, stopPropagation, stopImmediatePropagation, fn) {
+			return function(event) {
+				if (preventDefault) {
+					event.preventDefault();
+				}
+				if (stopPropagation) {
+					event.stopPropagation();
+				}
+				if (stopImmediatePropagation) {
+					event.stopImmediatePropagation();
+				}
+				fn(event);
+			};
 		}
 	}
 
