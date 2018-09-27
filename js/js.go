@@ -1,6 +1,9 @@
 package js
 
-import "syscall/js"
+import (
+	"sync"
+	"syscall/js"
+)
 
 var (
 	global    = js.Global()
@@ -8,17 +11,48 @@ var (
 	undefined = js.Undefined()
 )
 
+var (
+	mu      sync.RWMutex
+	classes = make(map[string]Value)
+)
+
+// Get is a shorthand for Global().Get().
 func Get(name string) Value {
 	return Value{global.Get(name)}
 }
 
+// Set is a shorthand for Global().Set().
 func Set(name string, v Value) {
 	global.Set(name, v.JSRef())
 }
 
+// Class searches for a class in global scope.
+// It caches results, so the lookup should be faster than calling Get.
+func Class(class string) Value {
+	mu.RLock()
+	v := classes[class]
+	mu.RUnlock()
+	if v.isZero() {
+		v = Get(class)
+		mu.Lock()
+		classes[class] = v
+		mu.Unlock()
+	}
+	return v
+}
+
+// New searches for a class in global scope and creates a new instance of that class.
+func New(class string, args ...interface{}) Value {
+	v := Class(class)
+	return v.New(args...)
+}
+
+// Ref is an alias for syscall/js.Value.
 type Ref = js.Value
 
+// JSRef is a common interface for object that are backed by a JS object.
 type JSRef interface {
+	// JSRef returns a JS object reference as defined by syscall/js.
 	JSRef() Ref
 }
 
@@ -38,64 +72,108 @@ func toJS(o interface{}) interface{} {
 
 var _ JSRef = Value{}
 
+// Value is a convenience wrapper for syscall/js.Value.
+// It provides some additional functionality, while storing no additional state.
+// Its safe to instantiate Value directly, by wrapping syscall/js.Value.
 type Value struct {
 	Ref
 }
 
+func (v Value) isZero() bool {
+	return v == (Value{})
+}
+
+// JSRef returns a JS object reference as defined by syscall/js.
 func (v Value) JSRef() Ref {
 	return v.Ref
 }
+
+// String converts a value to a string.
 func (v Value) String() string {
 	if !v.Valid() {
 		return ""
 	}
 	return v.Ref.String()
 }
+
+// IsNull checks if a value represents JS null object.
 func (v Value) IsNull() bool {
 	return v.Ref == null
 }
+
+// IsUndefined checks if a value represents JS undefined object.
 func (v Value) IsUndefined() bool {
 	return v.Ref == undefined
 }
+
+// Valid checks if object is defined and not null.
 func (v Value) Valid() bool {
 	return !v.IsNull() && !v.IsUndefined()
 }
+
+// Get returns the JS property by name.
 func (v Value) Get(name string) Value {
 	return Value{v.Ref.Get(name)}
 }
-func (v Value) Set(name string, val interface{}) {
-	v.Ref.Set(name, toJS(val))
-}
-func (v Value) Del(name string) {
 
+// Set sets the JS property to ValueOf(x).
+func (v Value) Set(name string, val interface{}) {
+	v.Ref.Set(name, toJS(ValueOf(val)))
 }
+
+// TODO: Del
+
+// Index returns JS index i of value v.
 func (v Value) Index(i int) Value {
 	return Value{v.Ref.Index(i)}
 }
+
+// SetIndex sets the JavaScript index i of value v to ValueOf(x).
 func (v Value) SetIndex(i int, val interface{}) {
-	v.Ref.SetIndex(i, toJS(val))
+	v.Ref.SetIndex(i, toJS(ValueOf(val)))
 }
+
+// Call does a JavaScript call to the method m of value v with the given arguments.
+// It panics if v has no method m.
+// The arguments get mapped to JavaScript values according to the ValueOf function.
 func (v Value) Call(name string, args ...interface{}) Value {
 	for i, a := range args {
-		args[i] = toJS(a)
+		args[i] = toJS(ValueOf(a))
 	}
 	return Value{v.Ref.Call(name, args...)}
 }
+
+// Invoke does a JavaScript call of the value v with the given arguments.
+// It panics if v is not a function.
+// The arguments get mapped to JavaScript values according to the ValueOf function.
 func (v Value) Invoke(args ...interface{}) Value {
 	for i, a := range args {
-		args[i] = toJS(a)
+		args[i] = toJS(ValueOf(a))
 	}
 	return Value{v.Ref.Invoke(args...)}
 }
+
+// New uses JavaScript's "new" operator with value v as constructor and the given arguments.
+// It panics if v is not a function.
+// The arguments get mapped to JavaScript values according to the ValueOf function.
 func (v Value) New(args ...interface{}) Value {
 	for i, a := range args {
-		args[i] = toJS(a)
+		args[i] = toJS(ValueOf(a))
 	}
 	return Value{v.Ref.New(args...)}
 }
+
+// InstanceOf reports whether v is an instance of type t according to JavaScript's instanceof operator.
 func (v Value) InstanceOf(class Value) bool {
 	return v.Ref.InstanceOf(class.Ref)
 }
+
+// InstanceOfClass reports whether v is an instance of named type according to JavaScript's instanceof operator.
+func (v Value) InstanceOfClass(class string) bool {
+	return v.InstanceOf(Class(class))
+}
+
+// Slice converts JS Array to a Go slice of JS values.
 func (v Value) Slice() []Value {
 	if !v.Valid() {
 		return nil
@@ -108,24 +186,19 @@ func (v Value) Slice() []Value {
 	return vals
 }
 
-type Callback = js.Callback
-
-func NewCallback(fnc func(v []Value)) Callback {
-	return js.NewCallback(func(refs []js.Value) {
-		vals := make([]Value, 0, len(refs))
-		for _, ref := range refs {
-			vals = append(vals, Value{ref})
-		}
-		fnc(vals)
-	})
-}
-
-func NewEventCallback(fnc func(v Value)) Callback {
-	return NewEventCallbackFlags(0, fnc)
-}
-
-func NewEventCallbackFlags(flags int, fnc func(v Value)) Callback {
-	return js.NewEventCallback(js.EventCallbackFlag(flags), func(ref js.Value) {
-		fnc(Value{ref})
-	})
+// ValueOf returns x as a JavaScript value:
+//
+//  | Go                     | JavaScript             |
+//  | ---------------------- | ---------------------- |
+//  | js.Value               | [its value]            |
+//  | js.TypedArray          | typed array            |
+//  | js.Callback            | function               |
+//  | nil                    | null                   |
+//  | bool                   | boolean                |
+//  | integers and floats    | number                 |
+//  | string                 | string                 |
+//  | []interface{}          | new array              |
+//  | map[string]interface{} | new object             |
+func ValueOf(o interface{}) Value {
+	return Value{js.ValueOf(toJS(o))}
 }
