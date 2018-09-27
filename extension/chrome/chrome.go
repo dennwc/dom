@@ -1,3 +1,5 @@
+//+build js
+
 package chrome
 
 import "github.com/dennwc/dom/js"

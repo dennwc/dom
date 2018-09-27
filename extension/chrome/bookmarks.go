@@ -1,3 +1,5 @@
+//+build js
+
 package chrome
 
 import "github.com/dennwc/dom/js"
@@ -33,7 +35,7 @@ func (b jsBookmarks) callAsync(name string, args ...interface{}) js.Value {
 	cb := js.NewEventCallback(func(v js.Value) {
 		ch <- v
 	})
-	defer cb.Close()
+	defer cb.Release()
 	args = append(args, cb)
 	b.v.Call(name, args...)
 	return <-ch

@@ -1,3 +1,5 @@
+//+build wasm
+
 package js
 
 type Error struct {

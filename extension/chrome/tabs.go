@@ -1,3 +1,5 @@
+//+build js
+
 package chrome
 
 import "github.com/dennwc/dom/js"
@@ -26,7 +28,7 @@ func (t jsTabs) callAsync(name string, args ...interface{}) js.Value {
 	cb := js.NewEventCallback(func(v js.Value) {
 		ch <- v
 	})
-	defer cb.Close()
+	defer cb.Release()
 	args = append(args, cb)
 	t.v.Call(name, args...)
 	return <-ch
