@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.protosizer_all) = true;
+option (gogoproto.sizer_all) = false;
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.unmarshaler_all) =  true;
+option (gogoproto.goproto_getters_all) = false;
+option go_package = "protocol";
+
+message HelloReq {
+    string name = 1;
+}
+
+message HelloResp {
+    string text = 1;
+}
+
+service HelloService {
+    rpc Hello (HelloReq) returns (HelloResp);
+}
+
