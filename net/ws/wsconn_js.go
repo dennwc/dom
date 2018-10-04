@@ -4,98 +4,165 @@ package ws
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"io"
 	"net"
+	"sync"
 	"time"
 
-	"github.com/dennwc/dom"
 	"github.com/dennwc/dom/js"
 )
+
+var errClosed = errors.New("ws: connection closed")
 
 // Dial connects to a WebSocket on a specified URL.
 func Dial(addr string) (net.Conn, error) {
 	c := &jsConn{
-		open: make(chan struct{}),
-		done: make(chan struct{}),
-		errc: make(chan error, 1),
-		msg:  make(chan js.Value, 1),
+		events: make(chan event, 1),
+		done:   make(chan struct{}),
+		read:   make(chan struct{}),
 	}
-	c.ws = js.New("WebSocket", addr)
-	c.installCallbacks()
-	select {
-	case err := <-c.errc:
-		return nil, err
-	case <-c.open:
+	c.openSocket(addr)
+	ev := <-c.events
+	if ev.Type == eventOpened {
+		// connected - start event loop
+		go c.loop()
+		return c, nil
 	}
-	return c, nil
+	c.Close()
+	if ev.Type == eventError {
+		return nil, js.Error{Value: ev.Data}
+	}
+	return nil, fmt.Errorf("unexpected event: %v", ev.Type)
 }
 
 type jsConn struct {
-	ws  js.Value
-	cbs *js.CallbackGroup
+	ws js.Value
+	cb js.Callback
 
-	open chan struct{}
-	errc chan error
-	done chan struct{}
+	events chan event
+	done   chan struct{}
+	read   chan struct{}
+
+	mu   sync.Mutex
 	err  error
-
-	msg chan js.Value
-
 	rbuf bytes.Buffer
 }
 
-func (c *jsConn) installCallbacks() {
-	c.cbs = c.ws.NewCallbackGroup()
-	c.cbs.Set("onopen", c.onOpen)
-	c.cbs.Set("onerror", c.onError)
-	c.cbs.Set("onclose", c.onClose)
-	msg := js.NewFunction("onMsg", "onErr", `
-return function(e){
-	const r = new FileReader();
-	r.addEventListener('loadend', function(){
-		onMsg(new Uint8Array(r.result));
-	})
-	r.addEventListener('onerror', onErr);
-	r.readAsArrayBuffer(e.data);
-}
-`)
-	cb := js.NewCallback(c.onMessage)
-	c.cbs.Add(cb)
-	c.ws.Set("onmessage", msg.Invoke(cb, cb))
+type event struct {
+	Type eventType
+	Data js.Value
 }
 
-func (c *jsConn) onError(args []js.Value) {
-	err := js.Error{Value: args[0]}
-	select {
-	case c.errc <- err:
-	default:
-		c.err = err
-	}
-	c.Close()
-}
+type eventType int
 
-func (c *jsConn) onMessage(args []js.Value) {
-	e := args[0]
-	if e.InstanceOfClass("Uint8Array") {
+const (
+	eventError  = eventType(0)
+	eventOpened = eventType(1)
+	eventClosed = eventType(2)
+	eventData   = eventType(3)
+)
+
+func (c *jsConn) openSocket(addr string) {
+	c.cb = js.NewCallback(func(v []js.Value) {
+		ev := event{
+			Type: eventType(v[0].Int()),
+			Data: v[1],
+		}
 		select {
-		case c.msg <- e:
+		case c.events <- ev:
 		case <-c.done:
 		}
-		return
-	}
-	dom.ConsoleLog("read error:", e)
-	c.onError([]js.Value{e})
+	})
+	setup := js.NewFunction("addr", "event", `
+s = new WebSocket(addr);
+s.onerror = (e) => {
+	event(0, e);
+}
+s.onopen = (e) => {
+	event(1, e);
+}
+s.onclose = (e) => {
+	event(2, e);
+}
+s.onmessage = (m) => {
+	const r = new FileReader();
+	r.addEventListener('loadend', function(){
+		const data = new Uint8Array(r.result);
+		event(3, data);
+	})
+	r.addEventListener('onerror', (e) => {
+		event(0, e);
+	});
+	r.readAsArrayBuffer(m.data);
+}
+return s;
+`)
+	c.ws = setup.Invoke(addr, c.cb)
 }
 
-func (c *jsConn) onOpen(_ []js.Value) {
-	close(c.open)
-}
-
-func (c *jsConn) onClose(args []js.Value) {
+func (c *jsConn) Close() error {
 	select {
 	case <-c.done:
 	default:
 		close(c.done)
+	}
+	c.ws.Call("close")
+	c.cb.Release()
+	return c.err
+}
+
+func (c *jsConn) wakeRead() {
+	select {
+	case c.read <- struct{}{}:
+	default:
+	}
+}
+
+func (c *jsConn) loop() {
+	defer c.Close()
+	for {
+		select {
+		case <-c.done:
+			return
+		case ev := <-c.events:
+			switch ev.Type {
+			case eventClosed:
+				c.mu.Lock()
+				c.err = errClosed
+				c.mu.Unlock()
+				c.wakeRead()
+				return
+			case eventError:
+				c.mu.Lock()
+				c.err = js.Error{Value: ev.Data}
+				c.mu.Unlock()
+				c.wakeRead()
+				return
+			case eventData:
+				arr := ev.Data
+
+				sz := arr.Get("length").Int()
+
+				data := make([]byte, sz)
+				m := js.MMap(data)
+				err := m.CopyFrom(arr)
+				m.Release()
+
+				c.mu.Lock()
+				if err == nil {
+					c.rbuf.Write(data)
+				} else {
+					c.err = err
+				}
+				c.mu.Unlock()
+				c.wakeRead()
+				if err != nil {
+					return
+				}
+			}
+		}
 	}
 }
 
@@ -106,48 +173,36 @@ func (c *jsConn) send(data []byte) {
 	c.ws.Call("send", jarr)
 }
 
-func (c *jsConn) close() {
-	c.ws.Call("close")
-}
-
 func (c *jsConn) Read(b []byte) (int, error) {
 	for {
+		var (
+			n   int
+			err error
+		)
+		c.mu.Lock()
 		if c.rbuf.Len() != 0 {
-			return c.rbuf.Read(b)
-		} else if c.err != nil {
-			return 0, c.err
+			n, err = c.rbuf.Read(b)
+		} else {
+			err = c.err
+		}
+		c.mu.Unlock()
+		if err != nil || n != 0 {
+			return n, err
 		}
 		select {
-		case err := <-c.errc:
-			c.err = err
-			return 0, c.err
 		case <-c.done:
 			return 0, io.EOF
-		case arr := <-c.msg:
-			sz := arr.Get("length").Int()
-
-			data := make([]byte, sz)
-			m := js.MMap(data)
-			err := m.CopyFrom(arr)
-			m.Release()
-			if err != nil {
-				c.err = err
-				return 0, err
-			}
-			c.rbuf.Write(data)
+		case <-c.read:
 		}
 	}
 }
 
 func (c *jsConn) Write(b []byte) (int, error) {
-	if c.err != nil {
-		return 0, c.err
-	}
-	select {
-	case err := <-c.errc:
-		c.err = err
-		return 0, c.err
-	default:
+	c.mu.Lock()
+	err := c.err
+	c.mu.Unlock()
+	if err != nil {
+		return 0, err
 	}
 	c.send(b)
 	return len(b), nil
@@ -171,15 +226,4 @@ func (c *jsConn) SetReadDeadline(t time.Time) error {
 
 func (c *jsConn) SetWriteDeadline(t time.Time) error {
 	return nil // TODO
-}
-
-func (c *jsConn) Close() error {
-	select {
-	case <-c.done:
-	default:
-		close(c.done)
-	}
-	c.close()
-	c.cbs.Release()
-	return c.err
 }
