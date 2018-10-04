@@ -68,10 +68,8 @@ func main() {
 	ch2to1 := make(chan []byte, 1)
 
 	go func() {
-		p1 := webrtc.New()
-
 		fmt.Println("1: peer discovery started")
-		peers, err := p1.Discover(&discovery{
+		peers, err := webrtc.Discover(&discovery{
 			send: ch1to2, recv: ch2to1,
 		})
 		if err != nil {
@@ -86,21 +84,33 @@ func main() {
 		}
 
 		fmt.Println("1: dialing peer")
-		peer, err := info.Dial()
+		conn, err := info.Dial()
 		if err != nil {
 			panic(err)
 		}
-		defer peer.Close()
-		_ = peer
+		defer conn.Close()
 
 		fmt.Println("1: connected!")
-		time.Sleep(time.Minute)
+		_, err = conn.Write([]byte("hello from 1\n"))
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("1: sent data")
+
+		buf := make([]byte, 128)
+		for {
+			n, err := conn.Read(buf)
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				panic(err)
+			}
+			fmt.Println("1:", string(buf[:n]))
+		}
 	}()
 
-	p2 := webrtc.New()
-
 	fmt.Println("2: waiting for offers")
-	peers, err := p2.Listen(&offerLis{
+	peers, err := webrtc.Listen(&offerLis{
 		send: ch2to1, recv: ch1to2,
 	})
 	if err != nil {
@@ -114,13 +124,31 @@ func main() {
 	}
 
 	fmt.Println("2: dialing peer")
-	peer, err := info.Dial()
+	conn, err := info.Dial()
 	if err != nil {
 		panic(err)
 	}
-	defer peer.Close()
-	_ = peer
+	defer conn.Close()
 
 	fmt.Println("2: connected!")
-	time.Sleep(time.Minute)
+	_, err = conn.Write([]byte("hello from 2\n"))
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("2: sent data")
+
+	buf := make([]byte, 128)
+	n, err := conn.Read(buf)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("2:", string(buf[:n]))
+
+	for {
+		_, err = conn.Write([]byte(time.Now().String() + "\n"))
+		if err != nil {
+			panic(err)
+		}
+		time.Sleep(time.Second * 5)
+	}
 }

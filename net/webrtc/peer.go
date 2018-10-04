@@ -2,12 +2,10 @@ package webrtc
 
 import (
 	"encoding/json"
-
-	"github.com/dennwc/dom/js"
+	"net"
 )
 
 type Peers struct {
-	l   *Local
 	c   *peerConnection
 	lis Listener
 
@@ -17,7 +15,10 @@ type Peers struct {
 
 func (p *Peers) Close() error {
 	p.lis.Close()
-	return p.c.Close()
+	if p.c != nil {
+		return p.c.Close()
+	}
+	return nil
 }
 
 func (p *Peers) Accept() (*PeerInfo, error) {
@@ -40,15 +41,28 @@ type PeerInfo struct {
 	info  peerDesc
 }
 
-func (p *PeerInfo) dial() (*Peer, error) {
-	// TODO: now we should only wait for a state change to "connected"
-	p.peers.c.OnDataChannel(func(ch js.Value) {
-		// ...
-	})
-	return &Peer{l: p.peers.l, c: p.peers.c}, nil
+func (p *PeerInfo) Dial() (net.Conn, error) {
+	if p.peers.ans == nil {
+		return p.dialActive()
+	}
+	return p.dialPassive()
 }
 
-func (p *PeerInfo) dialActive() (*Peer, error) {
+func (p *PeerInfo) dial() (net.Conn, error) {
+	// take ownership of the connection
+	c := p.peers.c
+	p.peers.c = nil
+
+	// now we should only wait for a state change to "connected"
+	// but instead we will wait for a data stream to come online
+	ch, err := c.WaitChannel(primaryChan)
+	if err != nil {
+		return nil, err
+	}
+	return ch, nil
+}
+
+func (p *PeerInfo) dialActive() (net.Conn, error) {
 	// if we are initiating a connection, we have just received an info from peer
 	// and we are ready to apply its configuration and start dialing
 	c := p.peers.c
@@ -68,7 +82,7 @@ func (p *PeerInfo) dialActive() (*Peer, error) {
 	return p.dial()
 }
 
-func (p *PeerInfo) dialPassive() (*Peer, error) {
+func (p *PeerInfo) dialPassive() (net.Conn, error) {
 	// if we are listening for connections, so we need to collect our local ICEs
 	// and send an answer with our info
 	c := p.peers.c
@@ -126,20 +140,4 @@ func (p *PeerInfo) dialPassive() (*Peer, error) {
 		return nil, err
 	}
 	return p.dial()
-}
-
-func (p *PeerInfo) Dial() (*Peer, error) {
-	if p.peers.ans == nil {
-		return p.dialActive()
-	}
-	return p.dialPassive()
-}
-
-type Peer struct {
-	l *Local
-	c *peerConnection
-}
-
-func (p *Peer) Close() error {
-	return p.c.Close()
 }
