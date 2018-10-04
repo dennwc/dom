@@ -166,10 +166,15 @@ func (c *jsConn) loop() {
 	}
 }
 
-func (c *jsConn) send(data []byte) {
+func cloneToJS(data []byte) js.Value {
 	arr := js.TypedArrayOf(data)
-	jarr := js.New("Uint8Array", arr)
+	v := js.New("Uint8Array", arr)
 	arr.Release()
+	return v
+}
+
+func (c *jsConn) send(data []byte) {
+	jarr := cloneToJS(data)
 	c.ws.Call("send", jarr)
 }
 
