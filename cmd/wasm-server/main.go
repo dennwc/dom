@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -15,10 +16,10 @@ import (
 
 var (
 	host      = flag.String("host", ":8080", "host to serve on")
-	directory = flag.String("d", ".", "the directory of static file to host")
+	directory = flag.String("d", "./", "the directory of static file to host")
+	cmds      = flag.String("apps", "cmd", "the root directory for apps")
+	def       = flag.String("main", "app", "default app name")
 )
-
-const defaultAppName = "app"
 
 var indexTmpl = template.Must(template.New("index").Parse(indexHTML))
 
@@ -29,8 +30,15 @@ func main() {
 
 	http.Handle("/", buildHandler{h: h, dir: *directory})
 
-	log.Printf("serving %q on %q\n", *directory, *host)
-	log.Fatal(http.ListenAndServe(*host, nil))
+	fmt.Println("apps folder: ", *cmds)
+	fmt.Println("default app: ", *def)
+	fmt.Println("static files:", *directory)
+	fmt.Println("serving on:  ", *host)
+	err := http.ListenAndServe(*host, nil)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		os.Exit(1)
+	}
 }
 
 type buildHandler struct {
@@ -39,7 +47,7 @@ type buildHandler struct {
 }
 
 func (h buildHandler) appPath(name string) string {
-	return filepath.Join(h.dir, "cmd", name, "main.go")
+	return filepath.Join(h.dir, *cmds, name, "main.go")
 }
 
 func (h buildHandler) buildWASM(name string) {
@@ -80,7 +88,7 @@ func (h buildHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	switch ext := path.Ext(rpath); ext {
 	case "", ".html":
-		appName := defaultAppName
+		appName := *def
 		if rpath != "/index.html" {
 			appName = strings.Trim(strings.TrimSuffix(rpath, ext), "/")
 		}
@@ -119,7 +127,7 @@ license that can be found in the LICENSE file.
 </head>
 
 <body>
-	<script src="` + execName + `"></script>
+	<script src="/` + execName + `"></script>
 	<script>
 		if (!WebAssembly.instantiateStreaming) { // polyfill
 			WebAssembly.instantiateStreaming = async (resp, importObject) => {
