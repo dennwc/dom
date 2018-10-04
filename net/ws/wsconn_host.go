@@ -27,7 +27,6 @@ func Listen(addr string, def http.Handler) (net.Listener, error) {
 		def: def,
 		// TODO: support HTTPS
 		h: &http.Server{
-			Addr:    u.Host,
 			Handler: mux,
 		},
 		stop: make(chan struct{}),
@@ -38,10 +37,13 @@ func Listen(addr string, def http.Handler) (net.Listener, error) {
 	if def != nil && strings.Trim(u.Path, "/") != "" {
 		mux.Handle("/", def)
 	}
-	errc := make(chan error, 1)
+	lis, err := net.Listen("tcp", u.Host)
+	if err != nil {
+		return nil, err
+	}
 	go func() {
-		defer close(errc)
-		errc <- http.ListenAndServe(u.Host, mux)
+		defer close(srv.errc)
+		srv.errc <- srv.h.Serve(lis)
 	}()
 	return srv, nil
 }
