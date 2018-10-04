@@ -28,6 +28,22 @@ func NewCallback(fnc func(v []Value)) Callback {
 	})
 }
 
+// NewCallbackAsync returns a wrapped callback function.
+//
+// Invoking the callback in JavaScript will queue the Go function fn for execution.
+// This execution happens asynchronously.
+//
+// Callback.Release must be called to free up resources when the callback will not be used any more.
+func NewCallbackAsync(fnc func(v []Value)) Callback {
+	return js.NewCallback(func(refs []js.Value) {
+		vals := make([]Value, 0, len(refs))
+		for _, ref := range refs {
+			vals = append(vals, Value{ref})
+		}
+		go fnc(vals)
+	})
+}
+
 // NewEventCallback is a shorthand for NewEventCallbackFlags with default flags.
 func NewEventCallback(fnc func(v Value)) Callback {
 	return NewEventCallbackFlags(0, fnc)
