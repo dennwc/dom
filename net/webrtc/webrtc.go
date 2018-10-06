@@ -4,30 +4,52 @@ package webrtc
 
 import (
 	"encoding/json"
+	"net"
 
 	"github.com/dennwc/dom/js"
 )
 
-type Listener interface {
-	Accept() ([]byte, error)
+// Peers represents a dynamic list of peers that were discovered via signalling.
+type Peers interface {
+	// Accept queries an information about next available peer. It won't connect to it automatically.
+	Accept() (Peer, error)
+	// Close ends a peer discovery process.
 	Close() error
 }
 
-type OfferListener interface {
-	Listener
-	Answer(data []byte) error
+// Peer represents an information about a potential peer.
+type Peer interface {
+	// UID returns a optional user ID of this peer.
+	UID() string
+	// Dial establishes a new connection to this peer.
+	Dial() (net.Conn, error)
 }
 
-func Listen(lis OfferListener) (*Peers, error) {
+// New creates a new local peer with a given ID that will use a specific server for peer discovery.
+func New(uid string, s Signalling) *Local {
+	return &Local{
+		uid: uid, s: s,
+	}
+}
+
+// Local represents an information about local peer.
+type Local struct {
+	uid string
+	s   Signalling
+}
+
+// Listen starts a passive peer discovery process by waiting for incoming discovery requests.
+func (l *Local) Listen() (Peers, error) {
+	offers, err := l.s.Listen(l.uid)
+	if err != nil {
+		return nil, err
+	}
 	c := newPeerConnection()
-	return &Peers{c: c, lis: lis, ans: lis}, nil
+	return &offerStream{self: l.uid, c: c, offers: offers}, nil
 }
 
-type Signaling interface {
-	Broadcast(data []byte) (Listener, error)
-}
-
-func Discover(net Signaling) (*Peers, error) {
+// Discover starts an active peer discovery process by broadcasting a discovery request.
+func (l *Local) Discover() (Peers, error) {
 	c := newPeerConnection()
 	c.NewDataChannel(primaryChan)
 	// prepare to collect local ICEs
@@ -50,8 +72,8 @@ func Discover(net Signaling) (*Peers, error) {
 		c.Close()
 		return nil, err
 	}
-	local := peerDesc{
-		Desc: offer, ICEs: ices,
+	local := connInfo{
+		SDP: offer, ICEs: ices,
 	}
 	// encode and broadcast
 	data, err := json.Marshal(local)
@@ -59,17 +81,18 @@ func Discover(net Signaling) (*Peers, error) {
 		c.Close()
 		return nil, err
 	}
-	lis, err := net.Broadcast(data)
+	answers, err := l.s.Broadcast(Signal{UID: l.uid, Data: data})
 	if err != nil {
 		c.Close()
 		return nil, err
 	}
-	return &Peers{c: c, lis: lis, local: local}, nil
+	return &answerStream{self: l.uid, c: c, answers: answers, local: local}, nil
 }
 
 const primaryChan = "primary"
 
-type peerDesc struct {
-	Desc js.Value   `json:"desc"`
+// connInfo combines SDP and ICE data of a specific peer.
+type connInfo struct {
+	SDP  js.Value   `json:"sdp"`
 	ICEs []js.Value `json:"ices"`
 }
