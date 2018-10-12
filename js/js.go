@@ -111,7 +111,7 @@ func (v Value) IsUndefined() bool {
 
 // Valid checks if object is defined and not null.
 func (v Value) Valid() bool {
-	return !v.IsNull() && !v.IsUndefined()
+	return !v.isZero() && !v.IsNull() && !v.IsUndefined()
 }
 
 // Get returns the JS property by name.
