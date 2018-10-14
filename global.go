@@ -8,6 +8,7 @@ import (
 var (
 	Doc  = GetDocument()
 	Body = Doc.GetElementsByTagName("body")[0]
+	Head = Doc.GetElementsByTagName("head")[0]
 )
 
 type Value = js.JSRef
