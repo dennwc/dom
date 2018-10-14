@@ -17,7 +17,7 @@ func ConsoleLog(args ...interface{}) {
 }
 
 func Loop() {
-	<-(chan struct{})(nil)
+	select {}
 }
 
 type Point = image.Point
