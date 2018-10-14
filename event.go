@@ -2,6 +2,7 @@ package dom
 
 import (
 	"fmt"
+
 	"github.com/dennwc/dom/js"
 )
 
@@ -23,6 +24,10 @@ type Event interface {
 	Type() string
 	IsTrusted() bool
 	Path() NodeList
+
+	PreventDefault()
+	StopPropagation()
+	StopImmediatePropagation()
 }
 
 type EventHandler func(Event)
@@ -110,6 +115,16 @@ func (e *BaseEvent) Target() *Element {
 
 func (e *BaseEvent) Path() NodeList {
 	return AsNodeList(e.v.Get("path"))
+}
+
+func (e *BaseEvent) PreventDefault() {
+	e.v.Call("preventDefault")
+}
+func (e *BaseEvent) StopPropagation() {
+	e.v.Call("stopPropagation")
+}
+func (e *BaseEvent) StopImmediatePropagation() {
+	e.v.Call("stopImmediatePropagation")
 }
 
 type MouseEventHandler func(*MouseEvent)
