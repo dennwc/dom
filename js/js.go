@@ -29,8 +29,8 @@ type Obj = map[string]interface{}
 type Arr = []interface{}
 
 // Get is a shorthand for Global().Get().
-func Get(name string) Value {
-	return Value{global.Get(name)}
+func Get(name string, path ...string) Value {
+	return Value{global}.Get(name, path...)
 }
 
 // Set is a shorthand for Global().Set().
