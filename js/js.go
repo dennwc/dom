@@ -19,6 +19,12 @@ var (
 	classes = make(map[string]Value)
 )
 
+// Obj is an alias for map[string]interface{}.
+type Obj = map[string]interface{}
+
+// Arr is an alias for []interface{}.
+type Arr = []interface{}
+
 // Get is a shorthand for Global().Get().
 func Get(name string) Value {
 	return Value{global.Get(name)}
