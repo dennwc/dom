@@ -1,8 +1,9 @@
 package dom
 
 import (
-	"github.com/dennwc/dom/js"
 	"image"
+
+	"github.com/dennwc/dom/js"
 )
 
 var (

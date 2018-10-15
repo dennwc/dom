@@ -7,6 +7,10 @@ func (d *Document) NewInput(typ string) *Input {
 	return inp
 }
 
+func NewInput(typ string) *Input {
+	return Doc.NewInput(typ)
+}
+
 type Input struct {
 	Element
 }
@@ -35,6 +39,10 @@ func (d *Document) NewButton(s string) *Button {
 	b := &Button{*e}
 	b.SetInnerHTML(s)
 	return b
+}
+
+func NewButton(s string) *Button {
+	return Doc.NewButton(s)
 }
 
 type Button struct {

@@ -10,6 +10,10 @@ func GetDocument() *Document {
 	return &Document{NodeBase{v: doc}}
 }
 
+func NewElement(tag string) *Element {
+	return Doc.CreateElement(tag)
+}
+
 var _ Node = (*Document)(nil)
 
 type Document struct {
