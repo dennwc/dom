@@ -141,8 +141,12 @@ func (v Value) Valid() bool {
 }
 
 // Get returns the JS property by name.
-func (v Value) Get(name string) Value {
-	return Value{v.Ref.Get(name)}
+func (v Value) Get(name string, path ...string) Value {
+	ref := v.Ref.Get(name)
+	for _, p := range path {
+		ref = ref.Get(p)
+	}
+	return Value{ref}
 }
 
 // Set sets the JS property to ValueOf(x).
