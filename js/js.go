@@ -38,6 +38,11 @@ func Set(name string, v interface{}) {
 	global.Set(name, toJS(v))
 }
 
+// Call is a shorthand for Global().Call().
+func Call(name string, args ...interface{}) Value {
+	return Value{global}.Call(name, args...)
+}
+
 // Class searches for a class in global scope.
 // It caches results, so the lookup should be faster than calling Get.
 func Class(class string) Value {
