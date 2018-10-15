@@ -12,6 +12,9 @@ var (
 	global    = js.Global()
 	null      = js.Null()
 	undefined = js.Undefined()
+
+	object = global.Get("Object")
+	array  = global.Get("Array")
 )
 
 var (
@@ -38,6 +41,12 @@ func Set(name string, v Value) {
 // Class searches for a class in global scope.
 // It caches results, so the lookup should be faster than calling Get.
 func Class(class string) Value {
+	switch class {
+	case "Object":
+		return Value{object}
+	case "Array":
+		return Value{array}
+	}
 	mu.RLock()
 	v := classes[class]
 	mu.RUnlock()
