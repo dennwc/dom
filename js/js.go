@@ -84,9 +84,15 @@ func toJS(o interface{}) interface{} {
 	case JSRef:
 		o = v.JSRef()
 	case []Value:
-		refs := make([]Ref, 0, len(v))
+		refs := make([]interface{}, 0, len(v))
 		for _, ref := range v {
 			refs = append(refs, ref.JSRef())
+		}
+		o = refs
+	case []js.Value:
+		refs := make([]interface{}, 0, len(v))
+		for _, ref := range v {
+			refs = append(refs, ref)
 		}
 		o = refs
 	}
@@ -141,7 +147,7 @@ func (v Value) Get(name string) Value {
 
 // Set sets the JS property to ValueOf(x).
 func (v Value) Set(name string, val interface{}) {
-	v.Ref.Set(name, toJS(ValueOf(val)))
+	v.Ref.Set(name, ValueOf(val).Ref)
 }
 
 // TODO: Del
@@ -153,7 +159,7 @@ func (v Value) Index(i int) Value {
 
 // SetIndex sets the JavaScript index i of value v to ValueOf(x).
 func (v Value) SetIndex(i int, val interface{}) {
-	v.Ref.SetIndex(i, toJS(ValueOf(val)))
+	v.Ref.SetIndex(i, ValueOf(val).Ref)
 }
 
 // Call does a JavaScript call to the method m of value v with the given arguments.
@@ -161,7 +167,7 @@ func (v Value) SetIndex(i int, val interface{}) {
 // The arguments get mapped to JavaScript values according to the ValueOf function.
 func (v Value) Call(name string, args ...interface{}) Value {
 	for i, a := range args {
-		args[i] = toJS(ValueOf(a))
+		args[i] = ValueOf(a).Ref
 	}
 	return Value{v.Ref.Call(name, args...)}
 }
@@ -171,7 +177,7 @@ func (v Value) Call(name string, args ...interface{}) Value {
 // The arguments get mapped to JavaScript values according to the ValueOf function.
 func (v Value) Invoke(args ...interface{}) Value {
 	for i, a := range args {
-		args[i] = toJS(ValueOf(a))
+		args[i] = ValueOf(a).Ref
 	}
 	return Value{v.Ref.Invoke(args...)}
 }
@@ -181,7 +187,7 @@ func (v Value) Invoke(args ...interface{}) Value {
 // The arguments get mapped to JavaScript values according to the ValueOf function.
 func (v Value) New(args ...interface{}) Value {
 	for i, a := range args {
-		args[i] = toJS(ValueOf(a))
+		args[i] = ValueOf(a).Ref
 	}
 	return Value{v.Ref.New(args...)}
 }
