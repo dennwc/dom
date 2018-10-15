@@ -34,8 +34,8 @@ func Get(name string) Value {
 }
 
 // Set is a shorthand for Global().Set().
-func Set(name string, v Value) {
-	global.Set(name, v.JSRef())
+func Set(name string, v interface{}) {
+	global.Set(name, toJS(v))
 }
 
 // Class searches for a class in global scope.
