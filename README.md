@@ -6,6 +6,8 @@ It's in an active development, but an API will be carefully versioned to
 avoid breaking users.
 Use Go dependency management tools to lock a specific version.
 
+More information about Go's WebAssembly support can be found on [Go's WebAssembly wiki page](https://github.com/golang/go/wiki/WebAssembly).
+
 **Features:**
 
 - Better JS API (wrappers for `syscall/js`)
@@ -40,3 +42,19 @@ wasm-server
 Check result: http://localhost:8080/
 
 The source code is recompiled on each page refresh, so feel free to experiment!
+
+# Similar Projects
+
+- [go-js-dom](https://github.com/dominikh/go-js-dom)
+
+# Editor Configuration
+
+If you are using Visual Studio Code, you can use [workspace settings](https://code.visualstudio.com/docs/getstarted/settings#_creating-user-and-workspace-settings) to configure the environment variables for the go tools.
+
+Your settings.json file should look something like this:
+
+```
+{
+    "go.toolsEnvVars": { "GOARCH": "wasm", "GOOS": "js" }
+}
+```
