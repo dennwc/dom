@@ -1,10 +1,22 @@
-//+build wasm
+//+build wasm,js
 
 package js
 
 import (
 	"syscall/js"
 )
+
+// NewFuncJS creates a function from a JS code string.
+//
+// Example:
+//	 NewFuncJS("a", "b", "return a+b").Call(a, b)
+func NewFuncJS(argsAndCode ...string) Value {
+	args := make([]interface{}, len(argsAndCode))
+	for i, v := range argsAndCode {
+		args[i] = v
+	}
+	return New("Function", args...)
+}
 
 // Callback is a Go function that got wrapped for use as a JavaScript callback.
 type Callback = js.Callback
@@ -19,12 +31,13 @@ type Callback = js.Callback
 //
 // Callback.Release must be called to free up resources when the callback will not be used any more.
 func NewCallback(fnc func(v []Value)) Callback {
-	return js.NewCallback(func(refs []js.Value) {
+	return js.NewCallback(func(this js.Value, refs []js.Value) interface{} {
 		vals := make([]Value, 0, len(refs))
 		for _, ref := range refs {
 			vals = append(vals, Value{ref})
 		}
 		fnc(vals)
+		return nil
 	})
 }
 
@@ -35,26 +48,32 @@ func NewCallback(fnc func(v []Value)) Callback {
 //
 // Callback.Release must be called to free up resources when the callback will not be used any more.
 func NewCallbackAsync(fnc func(v []Value)) Callback {
-	return js.NewCallback(func(refs []js.Value) {
+	return js.NewCallback(func(this js.Value, refs []js.Value) interface{} {
 		vals := make([]Value, 0, len(refs))
 		for _, ref := range refs {
 			vals = append(vals, Value{ref})
 		}
 		go fnc(vals)
+		return nil
+	})
+}
+
+// NewFunc returns a wrapped function that will be executed synchronously.
+func NewFunc(fnc func(this Value, args []Value) interface{}) Callback {
+	return js.NewCallback(func(this js.Value, refs []js.Value) interface{} {
+		vals := make([]Value, 0, len(refs))
+		for _, ref := range refs {
+			vals = append(vals, Value{ref})
+		}
+		v := fnc(Value{this}, vals)
+		return ValueOf(v).Ref
 	})
 }
 
 // NewEventCallback is a shorthand for NewEventCallbackFlags with default flags.
 func NewEventCallback(fnc func(v Value)) Callback {
-	return NewEventCallbackFlags(0, fnc)
-}
-
-// NewEventCallbackFlags returns a wrapped callback function, just like NewCallback, but the callback expects to have
-// exactly one argument, the event. Depending on flags, it will synchronously call event.preventDefault,
-// event.stopPropagation and/or event.stopImmediatePropagation before queuing the Go function fn for execution.
-func NewEventCallbackFlags(flags int, fnc func(v Value)) Callback {
-	return js.NewEventCallback(js.EventCallbackFlag(flags), func(ref js.Value) {
-		fnc(Value{ref})
+	return NewCallback(func(v []Value) {
+		fnc(v[0])
 	})
 }
 
@@ -92,7 +111,7 @@ func (g *CallbackGroup) AddEventListener(event string, fnc func(Value)) {
 }
 func (g *CallbackGroup) ErrorEvent(fnc func(error)) {
 	g.AddEventListener("onerror", func(v Value) {
-		fnc(Error{v})
+		fnc(Error{v.Ref})
 	})
 }
 func (g *CallbackGroup) ErrorEventChan() <-chan error {
@@ -143,16 +162,4 @@ func (g *CallbackGroup) Release() {
 		cb.Release()
 	}
 	g.cbs = nil
-}
-
-// NewFunction creates a function from JS code string.
-//
-// Example:
-//	 NewFunction("a", "b", "return a+b").Call(a, b)
-func NewFunction(argsAndCode ...string) Value {
-	args := make([]interface{}, len(argsAndCode))
-	for i, v := range argsAndCode {
-		args[i] = v
-	}
-	return New("Function", args...)
 }

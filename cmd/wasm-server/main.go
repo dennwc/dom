@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"html/template"
@@ -13,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/dennwc/dom/internal/goenv"
 )
 
 var (
@@ -24,20 +25,13 @@ var (
 
 var (
 	indexTmpl = template.Must(template.New("index").Parse(indexHTML))
-	GOROOT    = os.Getenv("GOROOT")
+	GOROOT    string
 )
 
 func main() {
 	flag.Parse()
 
-	if GOROOT == "" {
-		out, err := exec.Command("go", "env", "GOROOT").Output()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "error getting GOROOT:", err)
-		} else {
-			GOROOT = string(bytes.TrimSpace(out))
-		}
-	}
+	GOROOT = goenv.GOROOT()
 
 	h := http.FileServer(http.Dir(*directory))
 

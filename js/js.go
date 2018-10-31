@@ -74,19 +74,59 @@ func New(class string, args ...interface{}) Value {
 type Ref = js.Value
 
 // JSRef is a common interface for object that are backed by a JS object.
+//
+// Deprecated: see Wrapper
 type JSRef interface {
-	// JSRef returns a JS object reference as defined by syscall/js.
-	JSRef() Ref
+	deprecated()
+}
+
+// Wrapper is an alias for syscall/js.Wrapper.
+type Wrapper = js.Wrapper
+
+// Error is an alias for syscall/js.Error.
+type Error = js.Error
+
+// Type is a type name of a JS value, as returned by "typeof".
+type Type = js.Type
+
+const (
+	TypeObject   = js.TypeObject
+	TypeFunction = js.TypeFunction
+)
+
+// Type is an analog for JS "typeof" operator.
+func (v Value) Type() Type {
+	return v.Ref.Type()
+}
+
+// Object returns an Object JS class.
+func Object() Value {
+	return Value{object}
+}
+
+// Array returns an Array JS class.
+func Array() Value {
+	return Value{array}
+}
+
+// NewObject creates an empty JS object.
+func NewObject() Value {
+	return Object().New()
+}
+
+// NewArray creates an empty JS array.
+func NewArray() Value {
+	return Array().New()
 }
 
 func toJS(o interface{}) interface{} {
 	switch v := o.(type) {
-	case JSRef:
-		o = v.JSRef()
+	case Wrapper:
+		// pass directly
 	case []Value:
 		refs := make([]interface{}, 0, len(v))
 		for _, ref := range v {
-			refs = append(refs, ref.JSRef())
+			refs = append(refs, ref.JSValue())
 		}
 		o = refs
 	case []js.Value:
@@ -99,7 +139,7 @@ func toJS(o interface{}) interface{} {
 	return o
 }
 
-var _ JSRef = Value{}
+var _ Wrapper = Value{}
 
 // Value is a convenience wrapper for syscall/js.Value.
 // It provides some additional functionality, while storing no additional state.
@@ -113,7 +153,14 @@ func (v Value) isZero() bool {
 }
 
 // JSRef returns a JS object reference as defined by syscall/js.
+//
+// Deprecated: use JSValue
 func (v Value) JSRef() Ref {
+	return v.JSValue()
+}
+
+// JSValue implements Wrapper interface.
+func (v Value) JSValue() Ref {
 	return v.Ref
 }
 
@@ -151,7 +198,7 @@ func (v Value) Get(name string, path ...string) Value {
 
 // Set sets the JS property to ValueOf(x).
 func (v Value) Set(name string, val interface{}) {
-	v.Ref.Set(name, ValueOf(val).Ref)
+	v.Ref.Set(name, ValueOf(val))
 }
 
 // TODO: Del
@@ -163,7 +210,7 @@ func (v Value) Index(i int) Value {
 
 // SetIndex sets the JavaScript index i of value v to ValueOf(x).
 func (v Value) SetIndex(i int, val interface{}) {
-	v.Ref.SetIndex(i, ValueOf(val).Ref)
+	v.Ref.SetIndex(i, ValueOf(val))
 }
 
 // Call does a JavaScript call to the method m of value v with the given arguments.
@@ -171,7 +218,7 @@ func (v Value) SetIndex(i int, val interface{}) {
 // The arguments get mapped to JavaScript values according to the ValueOf function.
 func (v Value) Call(name string, args ...interface{}) Value {
 	for i, a := range args {
-		args[i] = ValueOf(a).Ref
+		args[i] = ValueOf(a)
 	}
 	return Value{v.Ref.Call(name, args...)}
 }
@@ -181,7 +228,7 @@ func (v Value) Call(name string, args ...interface{}) Value {
 // The arguments get mapped to JavaScript values according to the ValueOf function.
 func (v Value) Invoke(args ...interface{}) Value {
 	for i, a := range args {
-		args[i] = ValueOf(a).Ref
+		args[i] = ValueOf(a)
 	}
 	return Value{v.Ref.Invoke(args...)}
 }
@@ -191,14 +238,14 @@ func (v Value) Invoke(args ...interface{}) Value {
 // The arguments get mapped to JavaScript values according to the ValueOf function.
 func (v Value) New(args ...interface{}) Value {
 	for i, a := range args {
-		args[i] = ValueOf(a).Ref
+		args[i] = ValueOf(a)
 	}
 	return Value{v.Ref.New(args...)}
 }
 
 // InstanceOf reports whether v is an instance of type t according to JavaScript's instanceof operator.
-func (v Value) InstanceOf(class Value) bool {
-	return v.Ref.InstanceOf(class.Ref)
+func (v Value) InstanceOf(class Wrapper) bool {
+	return v.Ref.InstanceOf(class.JSValue())
 }
 
 // InstanceOfClass reports whether v is an instance of named type according to JavaScript's instanceof operator.
