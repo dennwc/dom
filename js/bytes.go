@@ -1,4 +1,4 @@
-//+build wasm
+//+build wasm,js
 
 package js
 
@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"syscall/js"
 )
+
+var _ Wrapper = TypedArray{}
 
 // TypedArray represents a JavaScript typed array.
 type TypedArray struct {
@@ -29,6 +31,8 @@ func TypedArrayOf(o interface{}) TypedArray {
 	return TypedArray{Value{v.Value}}
 }
 
+var _ Wrapper = (*Memory)(nil)
+
 type Memory struct {
 	v TypedArray
 	p []byte
@@ -39,7 +43,7 @@ func (m *Memory) Bytes() []byte {
 }
 
 // CopyFrom copies binary data from JS object into Go buffer.
-func (m *Memory) CopyFrom(v JSRef) error {
+func (m *Memory) CopyFrom(v Wrapper) error {
 	var src Value
 	switch v := v.(type) {
 	case Value:
@@ -47,7 +51,7 @@ func (m *Memory) CopyFrom(v JSRef) error {
 	case TypedArray:
 		src = v.Value
 	default:
-		src = Value{v.JSRef()}
+		src = Value{v.JSValue()}
 	}
 
 	switch {
@@ -76,8 +80,8 @@ func (m *Memory) CopyFrom(v JSRef) error {
 	}
 }
 
-func (m *Memory) JSRef() Ref {
-	return m.v.JSRef()
+func (m *Memory) JSValue() Ref {
+	return m.v.JSValue()
 }
 
 func (m *Memory) Release() {
