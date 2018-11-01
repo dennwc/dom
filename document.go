@@ -1,3 +1,5 @@
+//+build wasm,js
+
 package dom
 
 import "github.com/dennwc/dom/js"

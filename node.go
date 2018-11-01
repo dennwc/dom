@@ -1,3 +1,5 @@
+//+build wasm,js
+
 package dom
 
 import "github.com/dennwc/dom/js"
@@ -32,8 +34,8 @@ type NodeBase struct {
 	callbacks []js.Callback
 }
 
-func (e *NodeBase) JSRef() js.Ref {
-	return e.v.JSRef()
+func (e *NodeBase) JSValue() js.Ref {
+	return e.v.JSValue()
 }
 
 func (e *NodeBase) Remove() {
@@ -44,15 +46,19 @@ func (e *NodeBase) Remove() {
 	e.callbacks = nil
 }
 
-func (e *NodeBase) AddEventListenerFlags(typ string, flags int, h EventHandler) {
-	cb := js.NewEventCallbackFlags(flags, func(v js.Value) {
+func (e *NodeBase) AddEventListener(typ string, h EventHandler) {
+	cb := js.NewEventCallback(func(v js.Value) {
 		h(convertEvent(v))
 	})
 	e.callbacks = append(e.callbacks, cb)
 	e.v.Call("addEventListener", typ, cb)
 }
-func (e *NodeBase) AddEventListener(typ string, h EventHandler) {
-	e.AddEventListenerFlags(typ, 0, h)
+
+func (e *NodeBase) AddErrorListener(h func(err error)) {
+	e.AddEventListener("error", func(e Event) {
+		ConsoleLog(e.JSValue())
+		h(js.Error{Value: js.Value{Ref: e.JSValue()}})
+	})
 }
 
 func (e *NodeBase) BaseURI() string {
@@ -84,25 +90,25 @@ func (e *NodeBase) SetTextContent(s string) {
 }
 
 func (e *NodeBase) AppendChild(n Node) {
-	e.v.Call("appendChild", n.JSRef())
+	e.v.Call("appendChild", n)
 }
 
 func (e *NodeBase) Contains(n Node) bool {
-	return e.v.Call("contains", n.JSRef()).Bool()
+	return e.v.Call("contains", n).Bool()
 }
 
 func (e *NodeBase) IsEqualNode(n Node) bool {
-	return e.v.Call("isEqualNode", n.JSRef()).Bool()
+	return e.v.Call("isEqualNode", n).Bool()
 }
 
 func (e *NodeBase) IsSameNode(n Node) bool {
-	return e.v.Call("isSameNode", n.JSRef()).Bool()
+	return e.v.Call("isSameNode", n).Bool()
 }
 
 func (e *NodeBase) RemoveChild(n Node) Node {
-	return AsElement(e.v.Call("removeChild", n.JSRef()))
+	return AsElement(e.v.Call("removeChild", n))
 }
 
 func (e *NodeBase) ReplaceChild(n, old Node) Node {
-	return AsElement(e.v.Call("replaceChild", n.JSRef(), old.JSRef()))
+	return AsElement(e.v.Call("replaceChild", n, old))
 }

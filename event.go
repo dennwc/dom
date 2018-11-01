@@ -1,3 +1,5 @@
+//+build wasm,js
+
 package dom
 
 import (
@@ -7,14 +9,14 @@ import (
 )
 
 type EventTarget interface {
-	Value
+	js.Wrapper
 	AddEventListener(typ string, h EventHandler)
 	// TODO: removeEventListener
 	// TODO: dispatchEvent
 }
 
 type Event interface {
-	Value
+	js.Wrapper
 	Bubbles() bool
 	Cancelable() bool
 	Composed() bool
@@ -101,8 +103,8 @@ func (e *BaseEvent) IsTrusted() bool {
 	return e.getBool("isTrusted")
 }
 
-func (e *BaseEvent) JSRef() js.Ref {
-	return e.v.JSRef()
+func (e *BaseEvent) JSValue() js.Ref {
+	return e.v.JSValue()
 }
 
 func (e *BaseEvent) Type() string {

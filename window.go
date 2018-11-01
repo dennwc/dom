@@ -1,3 +1,5 @@
+//+build wasm,js
+
 package dom
 
 import "github.com/dennwc/dom/js"
@@ -16,8 +18,8 @@ type Window struct {
 	v js.Value
 }
 
-func (w *Window) JSRef() js.Ref {
-	return w.v.JSRef()
+func (w *Window) JSValue() js.Ref {
+	return w.v.JSValue()
 }
 
 func (w *Window) AddEventListener(typ string, h EventHandler) {
