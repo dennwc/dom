@@ -1,4 +1,4 @@
-//+build wasm
+//+build wasm,js
 
 package dom
 
@@ -14,7 +14,10 @@ var (
 	Head = Doc.GetElementsByTagName("head")[0]
 )
 
-type Value = js.JSRef
+// Value is an alias for js.Wrapper.
+//
+// Derprecated: use js.Wrapper
+type Value = js.Wrapper
 
 func ConsoleLog(args ...interface{}) {
 	js.Get("console").Call("log", args...)

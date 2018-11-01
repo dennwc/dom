@@ -1,4 +1,4 @@
-//+build wasm
+//+build wasm,js
 
 package dom
 
@@ -22,8 +22,8 @@ type Window struct {
 	v js.Value
 }
 
-func (w *Window) JSRef() js.Ref {
-	return w.v.JSRef()
+func (w *Window) JSValue() js.Ref {
+	return w.v.JSValue()
 }
 
 func (w *Window) AddEventListener(typ string, h EventHandler) {

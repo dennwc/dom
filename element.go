@@ -1,10 +1,9 @@
-//+build wasm
+//+build wasm,js
 
 package dom
 
 import (
 	"fmt"
-	sjs "syscall/js"
 
 	"github.com/dennwc/dom/js"
 )
@@ -238,26 +237,26 @@ func (e *Element) GetBoundingClientRect() Rect {
 	return Rect{Min: Point{x, y}, Max: Point{x + w, y + h}}
 }
 
-func (e *Element) onMouseEvent(typ string, flags int, h MouseEventHandler) {
-	e.AddEventListenerFlags(typ, flags, func(e Event) {
+func (e *Element) onMouseEvent(typ string, h MouseEventHandler) {
+	e.AddEventListener(typ, func(e Event) {
 		h(e.(*MouseEvent))
 	})
 }
 
 func (e *Element) OnClick(h MouseEventHandler) {
-	e.onMouseEvent("click", int(sjs.StopPropagation), h)
+	e.onMouseEvent("click", h)
 }
 
 func (e *Element) OnMouseDown(h MouseEventHandler) {
-	e.onMouseEvent("mousedown", int(sjs.StopPropagation), h)
+	e.onMouseEvent("mousedown", h)
 }
 
 func (e *Element) OnMouseMove(h MouseEventHandler) {
-	e.onMouseEvent("mousemove", 0, h)
+	e.onMouseEvent("mousemove", h)
 }
 
 func (e *Element) OnMouseUp(h MouseEventHandler) {
-	e.onMouseEvent("mouseup", int(sjs.StopPropagation), h)
+	e.onMouseEvent("mouseup", h)
 }
 
 type AttachShadowOpts struct {
