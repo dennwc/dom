@@ -35,7 +35,7 @@ func Get(name string, path ...string) Value {
 
 // Set is a shorthand for Global().Set().
 func Set(name string, v interface{}) {
-	global.Set(name, toJS(v))
+	Value{global}.Set(name, v)
 }
 
 // Call is a shorthand for Global().Call().
