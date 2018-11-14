@@ -57,7 +57,7 @@ func (e *NodeBase) AddEventListener(typ string, h EventHandler) {
 func (e *NodeBase) AddErrorListener(h func(err error)) {
 	e.AddEventListener("error", func(e Event) {
 		ConsoleLog(e.JSValue())
-		h(js.Error{Value: js.Value{Ref: e.JSValue()}})
+		h(js.Error{Value: e.JSValue()})
 	})
 }
 
