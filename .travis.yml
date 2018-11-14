@@ -1,0 +1,16 @@
+language: go
+
+go:
+  - "1.11.x"
+  - "master"
+
+dist: xenial
+sudo: required
+services:
+  - docker
+
+install:
+  - env GO111MODULE=on go get -d ./...
+
+script:
+  - env GO111MODULE=on GO_TESTPROXY_DEBUG=true go test -v ./...

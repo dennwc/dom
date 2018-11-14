@@ -73,16 +73,6 @@ func New(class string, args ...interface{}) Value {
 // Ref is an alias for syscall/js.Value.
 type Ref = js.Value
 
-// JSRef is a common interface for object that are backed by a JS object.
-//
-// Deprecated: see Wrapper
-type JSRef interface {
-	deprecated()
-}
-
-// Wrapper is an alias for syscall/js.Wrapper.
-type Wrapper = js.Wrapper
-
 // Error is an alias for syscall/js.Error.
 type Error = js.Error
 
@@ -122,7 +112,7 @@ func NewArray() Value {
 func toJS(o interface{}) interface{} {
 	switch v := o.(type) {
 	case Wrapper:
-		// pass directly
+		o = unwrap(v)
 	case []Value:
 		refs := make([]interface{}, 0, len(v))
 		for _, ref := range v {
@@ -198,7 +188,7 @@ func (v Value) Get(name string, path ...string) Value {
 
 // Set sets the JS property to ValueOf(x).
 func (v Value) Set(name string, val interface{}) {
-	v.Ref.Set(name, ValueOf(val))
+	v.Ref.Set(name, valueOf(val))
 }
 
 // TODO: Del
@@ -210,7 +200,7 @@ func (v Value) Index(i int) Value {
 
 // SetIndex sets the JavaScript index i of value v to ValueOf(x).
 func (v Value) SetIndex(i int, val interface{}) {
-	v.Ref.SetIndex(i, ValueOf(val))
+	v.Ref.SetIndex(i, valueOf(val))
 }
 
 // Call does a JavaScript call to the method m of value v with the given arguments.
@@ -218,7 +208,7 @@ func (v Value) SetIndex(i int, val interface{}) {
 // The arguments get mapped to JavaScript values according to the ValueOf function.
 func (v Value) Call(name string, args ...interface{}) Value {
 	for i, a := range args {
-		args[i] = ValueOf(a)
+		args[i] = valueOf(a)
 	}
 	return Value{v.Ref.Call(name, args...)}
 }
@@ -228,7 +218,7 @@ func (v Value) Call(name string, args ...interface{}) Value {
 // The arguments get mapped to JavaScript values according to the ValueOf function.
 func (v Value) Invoke(args ...interface{}) Value {
 	for i, a := range args {
-		args[i] = ValueOf(a)
+		args[i] = valueOf(a)
 	}
 	return Value{v.Ref.Invoke(args...)}
 }
@@ -238,7 +228,7 @@ func (v Value) Invoke(args ...interface{}) Value {
 // The arguments get mapped to JavaScript values according to the ValueOf function.
 func (v Value) New(args ...interface{}) Value {
 	for i, a := range args {
-		args[i] = ValueOf(a)
+		args[i] = valueOf(a)
 	}
 	return Value{v.Ref.New(args...)}
 }
@@ -266,6 +256,10 @@ func (v Value) Slice() []Value {
 	return vals
 }
 
+func valueOf(o interface{}) Ref {
+	return js.ValueOf(toJS(o))
+}
+
 // ValueOf returns x as a JavaScript value:
 //
 //  | Go                     | JavaScript             |
@@ -280,5 +274,5 @@ func (v Value) Slice() []Value {
 //  | []interface{}          | new array              |
 //  | map[string]interface{} | new object             |
 func ValueOf(o interface{}) Value {
-	return Value{js.ValueOf(toJS(o))}
+	return Value{valueOf(o)}
 }
