@@ -19,11 +19,13 @@ var errClosed = errors.New("ws: connection closed")
 // Dial connects to a WebSocket on a specified URL.
 func Dial(addr string) (net.Conn, error) {
 	c := &jsConn{
-		events: make(chan event, 1),
+		events: make(chan event, 2),
 		done:   make(chan struct{}),
 		read:   make(chan struct{}),
 	}
-	c.openSocket(addr)
+	if err := c.openSocket(addr); err != nil {
+		return nil, err
+	}
 	ev := <-c.events
 	if ev.Type == eventOpened {
 		// connected - start event loop
@@ -31,10 +33,21 @@ func Dial(addr string) (net.Conn, error) {
 		return c, nil
 	}
 	c.Close()
-	if ev.Type == eventError {
-		return nil, js.Error{Value: ev.Data}
+	if ev.Type != eventError {
+		return nil, fmt.Errorf("unexpected event: %v", ev.Type)
 	}
-	return nil, fmt.Errorf("unexpected event: %v", ev.Type)
+	if !ev.Data.Get("message").IsUndefined() {
+		return nil, fmt.Errorf("ws.dial: %v", js.NewError(ev.Data))
+	}
+	select {
+	case ce := <-c.events:
+		if ce.Type == eventClosed {
+			code := ce.Data.Get("code").Int()
+			return nil, fmt.Errorf("ws.dial: connection closed with code %d", code)
+		}
+	default:
+	}
+	return nil, fmt.Errorf("ws.dial: connection failed, see console")
 }
 
 type jsConn struct {
@@ -64,7 +77,16 @@ const (
 	eventData   = eventType(3)
 )
 
-func (c *jsConn) openSocket(addr string) {
+func (c *jsConn) openSocket(addr string) (gerr error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(error); ok {
+				gerr = e
+			} else {
+				gerr = fmt.Errorf("%v", r)
+			}
+		}
+	}()
 	c.cb = js.NewCallback(func(v []js.Value) {
 		ev := event{
 			Type: eventType(v[0].Int()),
@@ -75,8 +97,9 @@ func (c *jsConn) openSocket(addr string) {
 		case <-c.done:
 		}
 	})
-	setup := js.NewFunction("addr", "event", `
+	setup := js.NewFuncJS("addr", "event", `
 s = new WebSocket(addr);
+s.binaryType = 'arraybuffer';
 s.onerror = (e) => {
 	event(0, e);
 }
@@ -87,19 +110,12 @@ s.onclose = (e) => {
 	event(2, e);
 }
 s.onmessage = (m) => {
-	const r = new FileReader();
-	r.addEventListener('loadend', function(){
-		const data = new Uint8Array(r.result);
-		event(3, data);
-	})
-	r.addEventListener('onerror', (e) => {
-		event(0, e);
-	});
-	r.readAsArrayBuffer(m.data);
+	event(3, new Uint8Array(m.data));
 }
 return s;
 `)
 	c.ws = setup.Invoke(addr, c.cb)
+	return nil
 }
 
 func (c *jsConn) Close() error {
@@ -136,7 +152,7 @@ func (c *jsConn) loop() {
 				return
 			case eventError:
 				c.mu.Lock()
-				c.err = js.Error{Value: ev.Data}
+				c.err = js.NewError(ev.Data)
 				c.mu.Unlock()
 				c.wakeRead()
 				return
