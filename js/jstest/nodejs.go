@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/dennwc/testproxy"
 	"github.com/ory/dockertest"
@@ -88,9 +89,11 @@ func runInDocker(t *testing.T, fname, goroot string) bool {
 	}
 	cli := p.Client
 
+	now := time.Now()
 	if !pullIfNotExists(cli, nodejsImage) {
 		return false
 	}
+	t.Logf("pulled image %q in %v", nodejsImage, time.Since(now))
 
 	c, err := cli.CreateContainer(docker.CreateContainerOptions{
 		Config: &docker.Config{
