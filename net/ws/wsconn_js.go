@@ -39,13 +39,12 @@ func Dial(addr string) (net.Conn, error) {
 	if !ev.Data.Get("message").IsUndefined() {
 		return nil, fmt.Errorf("ws.dial: %v", js.NewError(ev.Data))
 	}
-	select {
-	case ce := <-c.events:
-		if ce.Type == eventClosed {
-			code := ce.Data.Get("code").Int()
-			return nil, fmt.Errorf("ws.dial: connection closed with code %d", code)
-		}
-	default:
+	// after an error the connection should switch to a closed state
+	ev = <-c.events
+	if ev.Type == eventClosed {
+		// unfortunately there is no way to get the real cause of an error
+		code := ev.Data.Get("code").Int()
+		return nil, fmt.Errorf("ws.dial: connection closed with code %d", code)
 	}
 	return nil, fmt.Errorf("ws.dial: connection failed, see console")
 }
