@@ -16,22 +16,29 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+func newServer(def http.Handler) *wsServer {
+	return &wsServer{
+		def:  def,
+		stop: make(chan struct{}),
+		errc: make(chan error, 1),
+		conn: make(chan net.Conn),
+	}
+}
+
 // Listen listens for incoming connections on a given URL and server other requests with def handler.
 func Listen(addr string, def http.Handler) (net.Listener, error) {
 	u, err := url.Parse(addr)
 	if err != nil {
 		return nil, err
 	}
+	srv := newServer(def)
 	mux := http.NewServeMux()
-	srv := &wsServer{
-		def: def,
-		// TODO: support HTTPS
-		h: &http.Server{
-			Handler: mux,
-		},
-		stop: make(chan struct{}),
-		errc: make(chan error, 1),
-		conn: make(chan net.Conn),
+	// TODO: support HTTPS
+	srv.h = &http.Server{
+		Handler: mux,
+	}
+	if u.Path == "" {
+		u.Path = "/"
 	}
 	mux.HandleFunc(u.Path, srv.handleWS)
 	if def != nil && strings.Trim(u.Path, "/") != "" {
@@ -74,7 +81,10 @@ func (s *wsServer) Close() error {
 	default:
 		close(s.stop)
 	}
-	return s.h.Close()
+	if s.h != nil {
+		return s.h.Close()
+	}
+	return nil
 }
 
 func (s *wsServer) Addr() net.Addr {
