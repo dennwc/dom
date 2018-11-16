@@ -76,6 +76,11 @@ type Ref = js.Value
 // Error is an alias for syscall/js.Error.
 type Error = js.Error
 
+// NewError creates a new Go error from JS error value.
+func NewError(e Value) error {
+	return Error{Value: e.JSValue()}
+}
+
 // Type is a type name of a JS value, as returned by "typeof".
 type Type = js.Type
 
