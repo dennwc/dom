@@ -3,6 +3,7 @@
 package jstest
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -187,10 +188,12 @@ func runChromeInDocker(t testing.TB) (string, func()) {
 	require.NoError(t, err)
 	cli := p.Client
 
+	now := time.Now()
 	if !pullIfNotExists(cli, chromeImage) {
 		t.SkipNow()
 		return "", func() {}
 	}
+	t.Logf("pulled image %q in %v", chromeImage, time.Since(now))
 
 	c, err := cli.CreateContainer(docker.CreateContainerOptions{
 		Config: &docker.Config{
@@ -199,11 +202,12 @@ func runChromeInDocker(t testing.TB) (string, func()) {
 	})
 	require.NoError(t, err)
 
+	buf := bytes.NewBuffer(nil)
 	cw, err := cli.AttachToContainerNonBlocking(docker.AttachToContainerOptions{
-		Container: c.ID,
-		//OutputStream: os.Stderr,
-		//ErrorStream: os.Stderr,
-		Stdout: false, Stderr: false,
+		Container:    c.ID,
+		OutputStream: buf,
+		ErrorStream:  buf,
+		Stdout:       true, Stderr: true,
 		Logs: true, Stream: true,
 	})
 	if err != nil {
@@ -235,14 +239,14 @@ func runChromeInDocker(t testing.TB) (string, func()) {
 	addr := info.NetworkSettings.IPAddress + ":9222"
 	if !waitPort(addr) {
 		remove()
-		require.Fail(t, "timeout")
+		require.Fail(t, "timeout", "logs:\n%v", buf.String())
 	}
 	return addr, remove
 }
 
 func waitPort(addr string) bool {
-	for i := 0; i < 3; i++ {
-		c, err := net.Dial("tcp", addr)
+	for i := 0; i < 10; i++ {
+		c, err := net.DialTimeout("tcp", addr, time.Second)
 		if err == nil {
 			c.Close()
 			return true
