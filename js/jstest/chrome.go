@@ -6,8 +6,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"net"
 	"net/http"
@@ -108,17 +108,17 @@ func (rn *chromeRunner) RunAndWait(stdout, stderr io.Writer) error {
 	}
 	defer c.CloseTarget(ctx, tg)
 
+	logbuf := bytes.NewBuffer(nil)
 	logf := func(format string, args ...interface{}) {
-		log.Printf(format, args...)
+		fmt.Fprintf(logbuf, format, args...)
 	}
-	noop := func(format string, args ...interface{}) {}
-	_ = noop
 
-	h, err := chromedp.NewTargetHandler(tg, logf, noop, logf)
+	h, err := chromedp.NewTargetHandler(tg, logf, logf, logf)
 	if err != nil {
 		return err
 	}
 
+	output := make(chan struct{}, 1)
 	h.OnEvent(func(ev interface{}) {
 		switch ev := ev.(type) {
 		case *runtime.EventConsoleAPICalled:
@@ -135,8 +135,16 @@ func (rn *chromeRunner) RunAndWait(stdout, stderr io.Writer) error {
 			}
 			line += "\n"
 			stdout.Write([]byte(line))
+			select {
+			case output <- struct{}{}:
+			default:
+			}
 		case *clog.EventEntryAdded:
 			stderr.Write([]byte(ev.Entry.Text + "\n"))
+			select {
+			case output <- struct{}{}:
+			default:
+			}
 		}
 	})
 
@@ -162,8 +170,19 @@ func (rn *chromeRunner) RunAndWait(stdout, stderr io.Writer) error {
 		return err
 	}
 
+	if err := chromeWaitDone(ctx, h, output, errc); err != nil {
+		logbuf.WriteTo(stderr)
+		return err
+	}
+	return nil
+}
+
+func chromeWaitDone(ctx context.Context, h *chromedp.TargetHandler, output <-chan struct{}, errc <-chan error) error {
+	timeout := time.NewTimer(time.Minute)
+	defer timeout.Stop()
+
 	var done bool
-	err = chromedp.Evaluate("done", &done).Do(ctx, h)
+	err := chromedp.Evaluate("done", &done).Do(ctx, h)
 	if err != nil {
 		return err
 	}
@@ -175,9 +194,15 @@ func (rn *chromeRunner) RunAndWait(stdout, stderr io.Writer) error {
 			return err
 		}
 		select {
-		case <-ticker.C:
+		case <-ctx.Done():
+			return ctx.Err()
 		case err = <-errc:
 			return err
+		case <-timeout.C:
+			return context.DeadlineExceeded
+		case <-output:
+			timeout.Reset(time.Minute)
+		case <-ticker.C:
 		}
 	}
 	return nil
