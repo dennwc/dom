@@ -77,7 +77,7 @@ type Ref = js.Value
 type Error = js.Error
 
 // NewError creates a new Go error from JS error value.
-func NewError(e Value) error {
+func NewError(e Wrapper) error {
 	return Error{Value: e.JSValue()}
 }
 
