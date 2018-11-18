@@ -15,7 +15,7 @@ var required = make(map[string]error)
 func appendAndWait(e *dom.Element) error {
 	errc := make(chan error, 1)
 	e.AddEventListener("error", func(e dom.Event) {
-		errc <- js.Error{Value: js.Value{Ref: e.JSValue()}}
+		errc <- js.NewError(e)
 	})
 	done := make(chan struct{})
 	e.AddEventListener("load", func(e dom.Event) {
@@ -69,6 +69,7 @@ func MustRequireValue(name, path string) js.Value {
 	return js.Get(name)
 }
 
+// RequireLazy is the same as Require, but returns a function that will load the file on the first call.
 func RequireLazy(path string) func() error {
 	var (
 		once sync.Once
@@ -82,6 +83,7 @@ func RequireLazy(path string) func() error {
 	}
 }
 
+// StylesheetString loads a CSS stylesheet string into the DOM.
 func StylesheetString(data string) {
 	s := dom.NewElement("style")
 	s.JSValue().Set("type", "text/css")
