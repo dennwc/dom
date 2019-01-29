@@ -18,7 +18,7 @@ type Node interface {
 	// methods
 
 	AppendChild(n Node)
-	AttachShadow(n Node) Node
+	AttachShadow() Node
 	Contains(n Node) bool
 	IsEqualNode(n Node) bool
 	IsSameNode(n Node) bool
@@ -111,6 +111,5 @@ func (e *NodeBase) ReplaceChild(n, old Node) Node {
 func (e *NodeBase) AttachShadow() Node {
 	m := make(map[string]interface{})
 	m["mode"] = "open"
-	v := js.ValueOf(m)
-	return AsElement(e.v.Call("attachShadow", v))
+	return AsElement(e.v.Call("attachShadow", js.ValueOf(m)))
 }
