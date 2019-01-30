@@ -109,7 +109,9 @@ func (e *NodeBase) ReplaceChild(n, old Node) Node {
 }
 
 func (e *NodeBase) AttachShadow() Node {
-	m := make(map[string]interface{})
-	m["mode"] = "open"
+	m := map[string]interface{}{
+		"mode": "open",
+	}
+
 	return AsElement(e.v.Call("attachShadow", js.ValueOf(m)))
 }
