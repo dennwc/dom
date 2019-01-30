@@ -2,6 +2,13 @@ package dom
 
 import "github.com/dennwc/dom/js"
 
+func AsTokenList(v js.Value) *TokenList {
+	if !v.Valid() {
+		return nil
+	}
+	return &TokenList{v: v}
+}
+
 type TokenList struct {
 	v js.Value
 }
