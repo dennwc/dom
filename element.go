@@ -78,5 +78,5 @@ func (e *Element) OnMouseUp(h MouseEventHandler) {
 }
 
 func (e *Element) ClassList() *TokenList {
-	return &TokenList{v: e.v.Get("classList")}
+	return AsTokenList(e.v.Get("classList"))
 }
