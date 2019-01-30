@@ -19,6 +19,7 @@ type Node interface {
 
 	AppendChild(n Node)
 	AttachShadow() Node
+	ClassList() *ClassList
 	Contains(n Node) bool
 	IsEqualNode(n Node) bool
 	IsSameNode(n Node) bool
@@ -114,4 +115,8 @@ func (e *NodeBase) AttachShadow() Node {
 	}
 
 	return AsElement(e.v.Call("attachShadow", js.ValueOf(m)))
+}
+
+func (e *NodeBase) ClassList() *ClassList {
+	return &ClassList{v: e.v.Get("classList")}
 }
