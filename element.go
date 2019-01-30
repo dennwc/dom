@@ -2,8 +2,9 @@ package dom
 
 import (
 	"fmt"
-	"github.com/dennwc/dom/js"
 	sjs "syscall/js"
+
+	"github.com/dennwc/dom/js"
 )
 
 var _ Node = (*Element)(nil)
@@ -75,4 +76,8 @@ func (e *Element) OnMouseMove(h MouseEventHandler) {
 
 func (e *Element) OnMouseUp(h MouseEventHandler) {
 	e.onMouseEvent("mouseup", int(sjs.StopPropagation), h)
+}
+
+func (e *Element) ClassList() *TokenList {
+	return &TokenList{v: e.v.Get("classList")}
 }
