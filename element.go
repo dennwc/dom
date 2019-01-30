@@ -2,9 +2,8 @@ package dom
 
 import (
 	"fmt"
-	sjs "syscall/js"
-
 	"github.com/dennwc/dom/js"
+	sjs "syscall/js"
 )
 
 var _ Node = (*Element)(nil)
