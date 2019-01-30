@@ -76,3 +76,7 @@ func (e *Element) OnMouseMove(h MouseEventHandler) {
 func (e *Element) OnMouseUp(h MouseEventHandler) {
 	e.onMouseEvent("mouseup", int(sjs.StopPropagation), h)
 }
+
+func (e *Element) ClassList() *TokenList {
+	return AsTokenList(e.v.Get("classList"))
+}
