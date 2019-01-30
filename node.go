@@ -113,7 +113,6 @@ func (e *NodeBase) AttachShadow() Node {
 	m := map[string]interface{}{
 		"mode": "open",
 	}
-
 	return AsElement(e.v.Call("attachShadow", js.ValueOf(m)))
 }
 
