@@ -2,8 +2,9 @@ package dom
 
 import (
 	"fmt"
-	"github.com/dennwc/dom/js"
 	sjs "syscall/js"
+
+	"github.com/dennwc/dom/js"
 )
 
 var _ Node = (*Element)(nil)
@@ -79,4 +80,18 @@ func (e *Element) OnMouseUp(h MouseEventHandler) {
 
 func (e *Element) ClassList() *TokenList {
 	return AsTokenList(e.v.Get("classList"))
+}
+
+func (e *Element) AttachShadow(open bool) *ShadowRoot {
+	m := map[string]interface{}{}
+	if open {
+		m["mode"] = "open"
+	} else {
+		m["mode"] = "closed"
+	}
+	return AsShadowRoot(e.v.Call("attachShadow", js.ValueOf(m)))
+}
+
+func (e *Element) ShadowRoot() *ShadowRoot {
+	return AsShadowRoot(e.v.Get("shadowRoot"))
 }
