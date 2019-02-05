@@ -45,7 +45,7 @@ func (e *Element) GetAttribute(k string) js.Value {
 }
 
 func (e *Element) RemoveAttribute(k string) {
-	return e.v.Call("removeAttribute", k)
+	e.v.Call("removeAttribute", k)
 }
 
 func (e *Element) Style() *Style {
