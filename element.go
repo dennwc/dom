@@ -44,6 +44,10 @@ func (e *Element) GetAttribute(k string) js.Value {
 	return e.v.Call("getAttribute", k)
 }
 
+func (e *Element) RemoveAttribute(k string) js.Value {
+	return e.v.Call("removeAttribute", k)
+}
+
 func (e *Element) Style() *Style {
 	return &Style{v: e.v.Get("style")}
 }
