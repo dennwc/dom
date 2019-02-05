@@ -44,7 +44,7 @@ func (e *Element) GetAttribute(k string) js.Value {
 	return e.v.Call("getAttribute", k)
 }
 
-func (e *Element) RemoveAttribute(k string) js.Value {
+func (e *Element) RemoveAttribute(k string) {
 	return e.v.Call("removeAttribute", k)
 }
 
