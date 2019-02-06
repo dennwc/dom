@@ -2,7 +2,7 @@ package dom
 
 func (d *Document) NewInput(typ string) *Input {
 	e := d.CreateElement("input")
-	inp := &Input{*e}
+	inp := &Input{HTMLElement{*e}}
 	inp.SetType(typ)
 	return inp
 }
@@ -12,7 +12,7 @@ func NewInput(typ string) *Input {
 }
 
 type Input struct {
-	Element
+	HTMLElement
 }
 
 func (inp *Input) Value() string {

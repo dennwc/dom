@@ -6,6 +6,13 @@ type Style struct {
 	v js.Value
 }
 
+func AsStyle(v js.Value) *Style {
+	if !v.Valid() {
+		return nil
+	}
+	return &Style{v: v}
+}
+
 func (s *Style) SetWidth(v Unit) {
 	s.v.Set("width", v.String())
 }
