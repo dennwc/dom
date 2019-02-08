@@ -1,3 +1,5 @@
+//+build wasm
+
 package js
 
 // Promise is a function wrapping a JS Promise.

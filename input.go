@@ -1,3 +1,5 @@
+//+build wasm
+
 package dom
 
 func (d *Document) NewInput(typ string) *Input {

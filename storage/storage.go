@@ -1,4 +1,4 @@
-//+build js
+//+build wasm
 
 package storage
 
