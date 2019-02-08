@@ -30,8 +30,8 @@ func (w *Window) AddEventListener(typ string, h EventHandler) {
 	}))
 }
 
-func (w *Window) Open(url, windowName, windowFeatures map[string]string) {
-	w.v.Call("open", url, windowName, joinKeyValuePairs(windowFeatures))
+func (w *Window) Open(url, windowName string, windowFeatures map[string]string) {
+	w.v.Call("open", url, windowName, joinKeyValuePairs(windowFeatures, ","))
 }
 
 func (w *Window) SetLocation(url string) {
@@ -47,9 +47,11 @@ func joinKeyValuePairs(kvpair map[string]string, joiner string) (ret string) {
 		return ""
 	}
 
+	pairs := make([]string, 0)
+
 	for k, v := range kvpair {
-		ret += k + "=" + v + joiner
+		pairs = append(pairs, k+"="+v)
 	}
-	ret = strings.TrimSuffix(ret, joiner)
+	ret = strings.Join(pairs, joiner)
 	return
 }
