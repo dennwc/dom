@@ -42,16 +42,14 @@ func (w *Window) OnResize(fnc func(e Event)) {
 	w.AddEventListener("resize", fnc)
 }
 
-func joinKeyValuePairs(kvpair map[string]string, joiner string) (ret string) {
+func joinKeyValuePairs(kvpair map[string]string, joiner string) string {
 	if kvpair == nil {
 		return ""
 	}
 
-	pairs := make([]string, 0)
-
+	pairs := make([]string, 0, len(kvpair))
 	for k, v := range kvpair {
 		pairs = append(pairs, k+"="+v)
 	}
-	ret = strings.Join(pairs, joiner)
-	return
+	return strings.Join(pairs, joiner)
 }
