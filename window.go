@@ -26,6 +26,14 @@ func (w *Window) AddEventListener(typ string, h EventHandler) {
 	}))
 }
 
+func (w *Window) Open(url, windowName, windowFeatures string) {
+	w.v.Call("open", url, windowName, windowFeatures)
+}
+
+func (w *Window) SetLocation(url string) {
+	w.v.Set("location", url)
+}
+
 func (w *Window) OnResize(fnc func(e Event)) {
 	w.AddEventListener("resize", fnc)
 }
