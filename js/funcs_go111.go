@@ -29,7 +29,7 @@ func NewCallback(fnc func(v []Value)) Callback {
 // This execution happens asynchronously.
 //
 // Callback.Release must be called to free up resources when the callback will not be used any more.
-func NewCallbackAsync(fnc func(v []Value)) Callback {
+func NewCallbackAsync(fnc func(v []Value)) Func {
 	return js.NewCallback(func(refs []js.Value) {
 		vals := make([]Value, 0, len(refs))
 		for _, ref := range refs {

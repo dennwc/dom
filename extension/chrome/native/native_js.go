@@ -26,14 +26,15 @@ type App struct {
 // Native connector will likely be killed after the response is received.
 func (app *App) Send(o Msg) js.Value {
 	resp := make(chan js.Value, 1)
-	var cb js.Callback
-	cb = js.NewCallback(func(args []js.Value) {
+	var cb js.Func
+	cb = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		cb.Release()
 		if len(args) != 0 {
 			resp <- args[0]
 		} else {
 			resp <- js.Undefined()
 		}
+		return nil
 	})
 	js.Global().Get("chrome").Get("runtime").Call("sendNativeMessage", app.name, o, cb)
 	return <-resp
@@ -61,8 +62,8 @@ func (app *App) Dial() (*Conn, error) {
 		app: app, port: port,
 		r: make(chan js.Value, 1),
 	}
-	c.cRecv = js.NewCallback(c.recv)
-	c.cDisc = js.NewCallback(c.disconnect)
+	c.cRecv = js.FuncOf(c.recv)
+	c.cDisc = js.FuncOf(c.disconnect)
 	port.Get("onMessage").Call("addListener", c.cRecv)
 	port.Get("onDisconnect").Call("addListener", c.cDisc)
 	return c, nil
@@ -76,17 +77,19 @@ type Conn struct {
 	err error
 	r   chan js.Value
 
-	cRecv, cDisc js.Callback
+	cRecv, cDisc js.Func
 }
 
-func (c *Conn) recv(args []js.Value) {
+func (c *Conn) recv(_ js.Value, args []js.Value) interface{} {
 	c.r <- args[0]
+	return nil
 }
-func (c *Conn) disconnect(_ []js.Value) {
+func (c *Conn) disconnect(_ js.Value, _ []js.Value) interface{} {
 	c.cDisc.Release()
 	c.cRecv.Release()
 	c.err = io.EOF
 	close(c.r)
+	return nil
 }
 
 // Recv receives a single message.

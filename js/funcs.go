@@ -8,9 +8,19 @@ import (
 
 // NewFuncJS creates a function from a JS code string.
 //
+// Deprecated: use RawFuncOf
+//
 // Example:
-//	 NewFuncJS("a", "b", "return a+b").Call(a, b)
+//	 NativeFuncOf("a", "b", "return a+b").Call(a, b)
 func NewFuncJS(argsAndCode ...string) Value {
+	return NativeFuncOf(argsAndCode...)
+}
+
+// NativeFuncOf creates a function from a JS code string.
+//
+// Example:
+//	 NativeFuncOf("a", "b", "return a+b").Call(a, b)
+func NativeFuncOf(argsAndCode ...string) Value {
 	args := make([]interface{}, len(argsAndCode))
 	for i, v := range argsAndCode {
 		args[i] = v
@@ -18,54 +28,71 @@ func NewFuncJS(argsAndCode ...string) Value {
 	return New("Function", args...)
 }
 
-// Callback is a Go function that got wrapped for use as a JavaScript callback.
-type Callback = js.Callback
+// Callback is a wrapped Go function to be called by JavaScript.
+//
+// Deprecated: use Func
+type Callback = Func
+
+// Func is a wrapped Go function to be called by JavaScript.
+type Func = js.Func
 
 // NewEventCallback is a shorthand for NewEventCallbackFlags with default flags.
-func NewEventCallback(fnc func(v Value)) Callback {
-	return NewCallback(func(v []Value) {
+func NewEventCallback(fnc func(v Value)) Func {
+	return CallbackOf(func(v []Value) {
 		fnc(v[0])
 	})
 }
 
-// NewCallbackGroup creates a new callback group on this object.
-func (v Value) NewCallbackGroup() *CallbackGroup {
-	return &CallbackGroup{
+// NewCallbackGroup creates a new function group on this object.
+//
+// Deprecated: use NewFuncGroup
+func (v Value) NewCallbackGroup() *FuncGroup {
+	return v.NewFuncGroup()
+}
+
+// NewFuncGroup creates a new function group on this object.
+func (v Value) NewFuncGroup() *FuncGroup {
+	return &FuncGroup{
 		v: v,
 	}
 }
 
-// CallbackGroup is a list of Go callbacks attached to an object.
-type CallbackGroup struct {
-	v   Value
-	cbs []Callback
+// CallbackGroup is a list of Go functions attached to an object.
+//
+// Deprecated: use FuncGroup
+type CallbackGroup = FuncGroup
+
+// FuncGroup is a list of Go functions attached to an object.
+type FuncGroup struct {
+	v     Value
+	funcs []Func
 }
 
-func (g *CallbackGroup) Add(cb Callback) {
-	g.cbs = append(g.cbs, cb)
+func (g *FuncGroup) Add(cb Func) {
+	g.funcs = append(g.funcs, cb)
 }
-func (g *CallbackGroup) Set(name string, fnc func([]Value)) {
-	cb := NewCallback(fnc)
+func (g *FuncGroup) Set(name string, fnc func([]Value)) {
+	cb := CallbackOf(fnc)
 	g.v.Set(name, cb)
 	g.Add(cb)
 }
-func (g *CallbackGroup) addEventListener(event string, cb Callback) {
+func (g *FuncGroup) addEventListener(event string, cb Func) {
 	g.v.Call("addEventListener", event, cb)
 }
-func (g *CallbackGroup) removeEventListener(event string, cb Callback) {
+func (g *FuncGroup) removeEventListener(event string, cb Func) {
 	g.v.Call("removeEventListener", event, cb)
 }
-func (g *CallbackGroup) AddEventListener(event string, fnc func(Value)) {
+func (g *FuncGroup) AddEventListener(event string, fnc func(Value)) {
 	cb := NewEventCallback(fnc)
 	g.addEventListener(event, cb)
 	g.Add(cb)
 }
-func (g *CallbackGroup) ErrorEvent(fnc func(error)) {
+func (g *FuncGroup) ErrorEvent(fnc func(error)) {
 	g.AddEventListener("onerror", func(v Value) {
 		fnc(Error{v.Ref})
 	})
 }
-func (g *CallbackGroup) ErrorEventChan() <-chan error {
+func (g *FuncGroup) ErrorEventChan() <-chan error {
 	ch := make(chan error, 1)
 	g.ErrorEvent(func(err error) {
 		select {
@@ -76,8 +103,8 @@ func (g *CallbackGroup) ErrorEventChan() <-chan error {
 	})
 	return ch
 }
-func (g *CallbackGroup) OneTimeEvent(event string, fnc func(Value)) {
-	var cb Callback
+func (g *FuncGroup) OneTimeEvent(event string, fnc func(Value)) {
+	var cb Func
 	fired := false
 	cb = NewEventCallback(func(v Value) {
 		if fired {
@@ -90,7 +117,7 @@ func (g *CallbackGroup) OneTimeEvent(event string, fnc func(Value)) {
 	g.addEventListener(event, cb)
 	g.Add(cb)
 }
-func (g *CallbackGroup) OneTimeEventChan(event string) <-chan Value {
+func (g *FuncGroup) OneTimeEventChan(event string) <-chan Value {
 	ch := make(chan Value, 1)
 	g.OneTimeEvent(event, func(v Value) {
 		select {
@@ -101,16 +128,16 @@ func (g *CallbackGroup) OneTimeEventChan(event string) <-chan Value {
 	})
 	return ch
 }
-func (g *CallbackGroup) OneTimeTrigger(event string) <-chan struct{} {
+func (g *FuncGroup) OneTimeTrigger(event string) <-chan struct{} {
 	ch := make(chan struct{})
 	g.OneTimeEvent(event, func(v Value) {
 		close(ch)
 	})
 	return ch
 }
-func (g *CallbackGroup) Release() {
-	for _, cb := range g.cbs {
-		cb.Release()
+func (g *FuncGroup) Release() {
+	for _, f := range g.funcs {
+		f.Release()
 	}
-	g.cbs = nil
+	g.funcs = nil
 }

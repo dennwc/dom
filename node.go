@@ -30,8 +30,8 @@ type Node interface {
 type NodeList []*Element
 
 type NodeBase struct {
-	v         js.Value
-	callbacks []js.Callback
+	v     js.Value
+	funcs []js.Func
 }
 
 func (e *NodeBase) JSValue() js.Ref {
@@ -40,17 +40,17 @@ func (e *NodeBase) JSValue() js.Ref {
 
 func (e *NodeBase) Remove() {
 	e.ParentNode().RemoveChild(e)
-	for _, c := range e.callbacks {
+	for _, c := range e.funcs {
 		c.Release()
 	}
-	e.callbacks = nil
+	e.funcs = nil
 }
 
 func (e *NodeBase) AddEventListener(typ string, h EventHandler) {
 	cb := js.NewEventCallback(func(v js.Value) {
 		h(convertEvent(v))
 	})
-	e.callbacks = append(e.callbacks, cb)
+	e.funcs = append(e.funcs, cb)
 	e.v.Call("addEventListener", typ, cb)
 }
 

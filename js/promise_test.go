@@ -11,7 +11,7 @@ import (
 )
 
 func TestPromiseAwait(t *testing.T) {
-	f1 := NewFuncJS(`return new Promise((resolve) => {
+	f1 := NativeFuncOf(`return new Promise((resolve) => {
 	setTimeout(resolve, 0)
 })`)
 
@@ -37,7 +37,7 @@ func TestPromiseAwait(t *testing.T) {
 }
 
 func TestPromiseAwaitReject(t *testing.T) {
-	f1 := NewFuncJS(`return new Promise((resolve, reject) => {
+	f1 := NativeFuncOf(`return new Promise((resolve, reject) => {
 	setTimeout(reject, 0)
 })`)
 
