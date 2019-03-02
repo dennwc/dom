@@ -2,10 +2,6 @@
 
 package js
 
-import (
-	"syscall/js"
-)
-
 // NewFuncJS creates a function from a JS code string.
 //
 // Deprecated: use RawFuncOf
@@ -27,14 +23,6 @@ func NativeFuncOf(argsAndCode ...string) Value {
 	}
 	return New("Function", args...)
 }
-
-// Callback is a wrapped Go function to be called by JavaScript.
-//
-// Deprecated: use Func
-type Callback = Func
-
-// Func is a wrapped Go function to be called by JavaScript.
-type Func = js.Func
 
 // NewEventCallback is a shorthand for NewEventCallbackFlags with default flags.
 func NewEventCallback(fnc func(v Value)) Func {
