@@ -10,8 +10,14 @@ sudo: required
 services:
   - docker
 
+matrix:
+  fast_finish: true
+
+env:
+  - GO111MODULE=on GO_TESTPROXY_DEBUG=true
+
 install:
-  - env GO111MODULE=on go get -d ./...
+  - go mod download
 
 script:
-  - env GO111MODULE=on GO_TESTPROXY_DEBUG=true go test -v ./...
+  - go test -v ./...
