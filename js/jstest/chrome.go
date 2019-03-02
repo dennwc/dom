@@ -122,7 +122,16 @@ func (rn *chromeRunner) RunAndWait(stdout, stderr io.Writer) error {
 	h.OnEvent(func(ev interface{}) {
 		switch ev := ev.(type) {
 		case *runtime.EventConsoleAPICalled:
-			if ev.Type != "log" || len(ev.Args) != 1 {
+			var w io.Writer
+			switch ev.Type {
+			case "log":
+				w = stdout
+			case "error":
+				w = stderr
+			default:
+				return
+			}
+			if len(ev.Args) != 1 {
 				return
 			}
 			var line string
@@ -134,7 +143,7 @@ func (rn *chromeRunner) RunAndWait(stdout, stderr io.Writer) error {
 				return
 			}
 			line += "\n"
-			stdout.Write([]byte(line))
+			w.Write([]byte(line))
 			select {
 			case output <- struct{}{}:
 			default:

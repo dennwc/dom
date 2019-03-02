@@ -83,7 +83,7 @@ func (v Value) Promised() *Promise {
 		if e.Ref == undefined {
 			e = NewObject()
 		}
-		p.err = Error{e.Ref}
+		p.err = NewError(e)
 		close(done)
 	})
 	v.Call("then", then).Call("catch", catch)

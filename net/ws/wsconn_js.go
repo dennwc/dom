@@ -4,6 +4,7 @@ package ws
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -18,40 +19,56 @@ var errClosed = errors.New("ws: connection closed")
 
 // Dial connects to a WebSocket on a specified URL.
 func Dial(addr string) (net.Conn, error) {
+	return DialContext(context.Background(), addr)
+}
+
+// DialContext connects to a WebSocket on a specified URL.
+func DialContext(ctx context.Context, addr string) (_ net.Conn, gerr error) {
 	c := &jsConn{
 		events: make(chan event, 2),
 		done:   make(chan struct{}),
 		read:   make(chan struct{}),
 	}
-	if err := c.openSocket(addr); err != nil {
-		return nil, err
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(error); ok {
+				gerr = e
+			} else {
+				gerr = fmt.Errorf("%v", r)
+			}
+		}
+	}()
+	p := c.openSocket(addr)
+
+	out, err := p.AwaitContext(ctx)
+	if err != nil {
+		defer func() {
+			c.state.Set("running", false)
+			c.cb.Release()
+		}()
+		e := js.Value{err.(js.Error).Value}
+		if !e.Get("message").IsUndefined() {
+			return nil, fmt.Errorf("ws.dial: %v", err)
+		}
+		// after an error the connection should switch to a closed state
+		ev := <-c.events
+		if ev.Type == eventClosed {
+			// unfortunately there is no way to get the real cause of an error
+			code := ev.Data.Get("code").Int()
+			return nil, fmt.Errorf("ws.dial: connection closed with code %d", code)
+		}
+		return nil, fmt.Errorf("ws.dial: connection failed, see console")
 	}
-	ev := <-c.events
-	if ev.Type == eventOpened {
-		// connected - start event loop
-		go c.loop()
-		return c, nil
-	}
-	c.Close()
-	if ev.Type != eventError {
-		return nil, fmt.Errorf("unexpected event: %v", ev.Type)
-	}
-	if !ev.Data.Get("message").IsUndefined() {
-		return nil, fmt.Errorf("ws.dial: %v", js.NewError(ev.Data))
-	}
-	// after an error the connection should switch to a closed state
-	ev = <-c.events
-	if ev.Type == eventClosed {
-		// unfortunately there is no way to get the real cause of an error
-		code := ev.Data.Get("code").Int()
-		return nil, fmt.Errorf("ws.dial: connection closed with code %d", code)
-	}
-	return nil, fmt.Errorf("ws.dial: connection failed, see console")
+	c.ws = out[0]
+	// connected - start event loop
+	go c.loop()
+	return c, nil
 }
 
 type jsConn struct {
-	ws js.Value
-	cb js.Func
+	ws    js.Value
+	cb    js.Func
+	state js.Value
 
 	events chan event
 	done   chan struct{}
@@ -76,16 +93,7 @@ const (
 	eventData   = eventType(3)
 )
 
-func (c *jsConn) openSocket(addr string) (gerr error) {
-	defer func() {
-		if r := recover(); r != nil {
-			if e, ok := r.(error); ok {
-				gerr = e
-			} else {
-				gerr = fmt.Errorf("%v", r)
-			}
-		}
-	}()
+func (c *jsConn) openSocket(addr string) *js.Promise {
 	c.cb = js.CallbackOf(func(v []js.Value) {
 		ev := event{
 			Type: eventType(v[0].Int()),
@@ -96,25 +104,40 @@ func (c *jsConn) openSocket(addr string) (gerr error) {
 		case <-c.done:
 		}
 	})
-	setup := js.NativeFuncOf("addr", "event", `
-s = new WebSocket(addr);
-s.binaryType = 'arraybuffer';
-s.onerror = (e) => {
-	event(0, e);
-}
-s.onopen = (e) => {
-	event(1, e);
-}
-s.onclose = (e) => {
-	event(2, e);
-}
-s.onmessage = (m) => {
-	event(3, new Uint8Array(m.data));
-}
-return s;
+	c.state = js.ValueOf(js.Obj{
+		"running": true,
+	})
+	setup := js.NativeFuncOf("addr", "event", "state", `
+return new Promise(function(resolve, reject){
+	var resolved = false;
+	var s = new WebSocket(addr);
+	s.binaryType = 'arraybuffer';
+	s.onerror = (e) => {
+		if (!resolved) {
+			resolved = true;
+			reject(e);
+			return;
+		}
+		event(0, e);
+	}
+	s.onopen = (e) => {
+		if (!resolved) {
+			resolved = true;
+			resolve(s);
+			return;
+		}
+		event(1, e);
+	}
+	s.onclose = (e) => {
+		if (!state.running) return;
+		event(2, e);
+	}
+	s.onmessage = (m) => {
+		event(3, new Uint8Array(m.data));
+	}
+})
 `)
-	c.ws = setup.Invoke(addr, c.cb)
-	return nil
+	return setup.Invoke(addr, c.cb, c.state).Promised()
 }
 
 func (c *jsConn) Close() error {
@@ -123,6 +146,7 @@ func (c *jsConn) Close() error {
 	default:
 		close(c.done)
 	}
+	c.state.Set("running", false)
 	c.ws.Call("close")
 	c.cb.Release()
 	return c.err
