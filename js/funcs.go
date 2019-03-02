@@ -110,6 +110,7 @@ func (g *FuncGroup) OneTimeEvent(event string, fnc func(Value)) {
 		if fired {
 			panic("one time callback fired twice")
 		}
+		fired = true
 		fnc(v)
 		g.removeEventListener(event, cb)
 		cb.Release()
