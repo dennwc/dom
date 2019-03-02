@@ -3,6 +3,7 @@
 package require
 
 import (
+	"errors"
 	"strings"
 	"sync"
 
@@ -30,26 +31,44 @@ func appendAndWait(e *dom.Element) error {
 	return nil
 }
 
-// Require loads a specified file (js or css) into the document and waits for it to apply.
+// Require adds a specified file (js or css) into the document and waits for it to load.
+//
+// The function relies on a file extension to detect the type. If there is no extension in
+// the file path, use specific function like Stylesheet or Script. As an alternative,
+// append a '#.js' or '#.css' suffix to a file path.
 func Require(path string) error {
+	if strings.HasSuffix(path, ".css") {
+		return Stylesheet(path)
+	} else if strings.HasSuffix(path, ".js") {
+		return Script(path)
+	}
+	return errors.New("the file should have an extension specified (or '#.ext')")
+}
+
+// Stylesheet add a specified CSS file into the document and waits for it to load.
+func Stylesheet(path string) error {
 	if err, ok := required[path]; ok {
 		return err
 	}
-	var s *dom.Element
-	if strings.HasSuffix(path, ".css") {
-		// stylesheet
-		s = dom.NewElement("link")
-		v := s.JSValue()
-		v.Set("type", "text/css")
-		v.Set("rel", "stylesheet")
-		v.Set("href", path)
-	} else {
-		// script
-		s = dom.NewElement("script")
-		v := s.JSValue()
-		v.Set("async", true)
-		v.Set("src", path)
+	s := dom.NewElement("link")
+	v := s.JSValue()
+	v.Set("type", "text/css")
+	v.Set("rel", "stylesheet")
+	v.Set("href", path)
+	err := appendAndWait(s)
+	required[path] = err
+	return err
+}
+
+// Script adds a specified JS file into the document and waits for it to load.
+func Script(path string) error {
+	if err, ok := required[path]; ok {
+		return err
 	}
+	s := dom.NewElement("script")
+	v := s.JSValue()
+	v.Set("async", true)
+	v.Set("src", path)
 	err := appendAndWait(s)
 	required[path] = err
 	return err
