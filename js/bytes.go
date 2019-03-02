@@ -61,7 +61,7 @@ func (m *Memory) CopyFrom(v Wrapper) error {
 	case src.InstanceOfClass("Blob"):
 		r := New("FileReader")
 
-		cg := r.NewCallbackGroup()
+		cg := r.NewFuncGroup()
 		defer cg.Release()
 		done := cg.OneTimeTrigger("loadend")
 		errc := cg.ErrorEventChan()

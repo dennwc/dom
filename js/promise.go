@@ -13,8 +13,8 @@ var (
 // NewPromise runs a given function asynchronously by converting it to JavaScript promise.
 // Promise will be resolved if functions returns a nil error and will be rejected otherwise.
 func NewPromise(fnc func() ([]interface{}, error)) Value {
-	var initFunc Callback
-	initFunc = NewCallbackAsync(func(args []Value) {
+	var initFunc Func
+	initFunc = AsyncCallbackOf(func(args []Value) {
 		initFunc.Release()
 		resolve, reject := args[0], args[1]
 		res, err := fnc()
@@ -66,14 +66,14 @@ func (v Value) Promised() *Promise {
 	p := &Promise{
 		v: v, done: done,
 	}
-	var then, catch Callback
-	then = NewCallback(func(v []Value) {
+	var then, catch Func
+	then = CallbackOf(func(v []Value) {
 		then.Release()
 		catch.Release()
 		p.res = v
 		close(done)
 	})
-	catch = NewCallback(func(v []Value) {
+	catch = CallbackOf(func(v []Value) {
 		then.Release()
 		catch.Release()
 		var e Value

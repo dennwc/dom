@@ -32,7 +32,7 @@ func newPeerConnection() *peerConnection {
 type peerConnection struct {
 	id uint32
 	v  js.Value
-	g  *js.CallbackGroup
+	g  *js.FuncGroup
 
 	errc    chan error
 	newChan chan string
@@ -114,12 +114,12 @@ type chanEvent struct {
 }
 
 func (c *peerConnection) registerStateHandlers() {
-	c.g = c.v.NewCallbackGroup()
+	c.g = c.v.NewFuncGroup()
 	// always register an error and connection state event handlers
 	c.g.Set("onerror", func(v []js.Value) {
 		dom.ConsoleLog("error:", c.id, v[0])
 		select {
-		case c.errc <- js.Error{Value: v[0]}:
+		case c.errc <- js.NewError(v[0]):
 		default:
 		}
 	})
@@ -136,7 +136,7 @@ func (c *peerConnection) registerStateHandlers() {
 	}
 
 	// handle incoming data channels
-	jfnc := js.NewFunction("fnc", `
+	jfnc := js.JSFuncOf("fnc", `
 return function(ce) {
 	const ch = ce.channel;
 	const name = ch.label;
@@ -166,8 +166,8 @@ func (c *peerConnection) Close() error {
 	return nil
 }
 
-func (c *peerConnection) onICECandidate(fnc func(cand js.Value)) js.Callback {
-	cb := js.NewCallback(func(v []js.Value) {
+func (c *peerConnection) onICECandidate(fnc func(cand js.Value)) js.Func {
+	cb := js.CallbackOf(func(v []js.Value) {
 		cand := v[0].Get("candidate")
 		if debug {
 			dom.ConsoleLog("candidate:", c.id, cand)
@@ -183,8 +183,8 @@ func (c *peerConnection) OnICECandidate(fnc func(cand js.Value)) {
 	c.g.Add(cb)
 }
 
-func (c *peerConnection) newChanEventCallback() js.Callback {
-	cb := js.NewCallback(func(v []js.Value) {
+func (c *peerConnection) newChanEventCallback() js.Func {
+	cb := js.CallbackOf(func(v []js.Value) {
 		e := chanEvent{
 			Name: v[0].String(),
 			Type: eventType(v[1].Int()),
@@ -212,7 +212,7 @@ func (c *peerConnection) NewDataChannel(name string) {
 	// TODO: it can be the same callback
 	cb := c.newChanEventCallback()
 	// handle initiated data channels
-	ch := js.NewFunction("v", "name", "fnc", `
+	ch := js.NativeFuncOf("v", "name", "fnc", `
 	const ch = v.createDataChannel(name);
 	ch.onerror = (e) => {
 		fnc(name, 0, e);
@@ -280,7 +280,7 @@ type iceFunc func() ([]js.Value, error)
 
 func (c *peerConnection) CollectICEs() iceFunc {
 	var (
-		cb   js.Callback
+		cb   js.Func
 		done = make(chan struct{})
 		ices []js.Value
 	)

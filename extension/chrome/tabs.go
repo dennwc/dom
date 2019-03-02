@@ -5,7 +5,7 @@ package chrome
 import "github.com/dennwc/dom/js"
 
 type AllTabs interface {
-	js.JSRef
+	js.Wrapper
 	GetCurrent() Tab
 	GetSelected(window WindowID) Tab
 	GetAllInWindow(window WindowID) []Tab
@@ -19,8 +19,8 @@ type jsTabs struct {
 	v js.Value
 }
 
-func (t jsTabs) JSRef() js.Ref {
-	return t.v.JSRef()
+func (t jsTabs) JSValue() js.Ref {
+	return t.v.JSValue()
 }
 
 func (t jsTabs) callAsync(name string, args ...interface{}) js.Value {
@@ -66,7 +66,7 @@ func (t jsTabs) GetAllInWindow(window WindowID) []Tab {
 }
 
 type Tab interface {
-	js.JSRef
+	js.Wrapper
 	ID() int
 	Active() bool
 	Incognito() bool
@@ -84,8 +84,8 @@ type jsTab struct {
 	v js.Value
 }
 
-func (t jsTab) JSRef() js.Ref {
-	return t.v.JSRef()
+func (t jsTab) JSValue() js.Ref {
+	return t.v.JSValue()
 }
 
 func (t jsTab) ID() int {

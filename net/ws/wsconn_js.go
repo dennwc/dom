@@ -51,7 +51,7 @@ func Dial(addr string) (net.Conn, error) {
 
 type jsConn struct {
 	ws js.Value
-	cb js.Callback
+	cb js.Func
 
 	events chan event
 	done   chan struct{}
@@ -86,7 +86,7 @@ func (c *jsConn) openSocket(addr string) (gerr error) {
 			}
 		}
 	}()
-	c.cb = js.NewCallback(func(v []js.Value) {
+	c.cb = js.CallbackOf(func(v []js.Value) {
 		ev := event{
 			Type: eventType(v[0].Int()),
 			Data: v[1],
@@ -96,7 +96,7 @@ func (c *jsConn) openSocket(addr string) (gerr error) {
 		case <-c.done:
 		}
 	})
-	setup := js.NewFuncJS("addr", "event", `
+	setup := js.NativeFuncOf("addr", "event", `
 s = new WebSocket(addr);
 s.binaryType = 'arraybuffer';
 s.onerror = (e) => {

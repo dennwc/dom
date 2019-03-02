@@ -17,7 +17,7 @@ func Bookmarks() AllBookmarks {
 }
 
 type BookmarkNode interface {
-	js.JSRef
+	js.Wrapper
 	ID() string
 	ParentID() string
 	Index() int
@@ -53,8 +53,8 @@ type jsBookmarkNode struct {
 	v js.Value
 }
 
-func (b jsBookmarkNode) JSRef() js.Ref {
-	return b.v.JSRef()
+func (b jsBookmarkNode) JSValue() js.Ref {
+	return b.v.JSValue()
 }
 
 func (b jsBookmarkNode) ID() string {
