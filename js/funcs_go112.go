@@ -4,6 +4,14 @@ package js
 
 import "syscall/js"
 
+// Callback is a wrapped Go function to be called by JavaScript.
+//
+// Deprecated: use Func
+type Callback = Func
+
+// Func is a wrapped Go function to be called by JavaScript.
+type Func = js.Func
+
 // NewCallback returns a wrapped callback function.
 //
 // Invoking the callback in JavaScript will queue the Go function fn for execution.
