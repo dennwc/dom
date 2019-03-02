@@ -15,6 +15,12 @@ func TestRequireJS(t *testing.T) {
 	require.Equal(t, "ok", js.Get("Val").String())
 }
 
+func TestRequireJSNoExt(t *testing.T) {
+	err := Script("/env")
+	require.NoError(t, err)
+	require.Equal(t, "ok", js.Get("Val").String())
+}
+
 func TestRequireJSSyntaxError(t *testing.T) {
 	t.SkipNow() // FIXME
 	err := Require("/err.js")
@@ -23,5 +29,11 @@ func TestRequireJSSyntaxError(t *testing.T) {
 
 func TestRequireJSNotFound(t *testing.T) {
 	err := Require("/na.js")
+	require.NotNil(t, err)
+}
+
+func TestRequireJSNotFoundNoExt(t *testing.T) {
+	err := Script("/na")
+
 	require.NotNil(t, err)
 }
