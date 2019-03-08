@@ -274,3 +274,8 @@ func (e *Element) AttachShadow(opts AttachShadowOpts) *ShadowRoot {
 	m["delegatesFocus"] = opts.DeligatesFocus
 	return AsShadowRoot(e.v.Call("attachShadow", js.ValueOf(m)))
 }
+
+// InsertAdjacentElement inserts a given element node at a given position relative to the element it is invoked upon.
+func (e *Element) InsertAdjacentElement(position string, newElement *Element) js.Value {
+	return e.v.Call("insertAdjacentElement", position, newElement.v)
+}
