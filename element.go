@@ -34,6 +34,15 @@ type Element struct {
 	NodeBase
 }
 
+type Position string
+
+const (
+	BeforeBegin Position = "beforebegin"
+	BeforeEnd   Position = "beforeend"
+	AfterBegin  Position = "afterbegin"
+	AfterEnd    Position = "afterend"
+)
+
 // Properties
 
 // Attributes returns a NamedNodeMap object containing the assigned attributes of the corresponding HTML element.
@@ -276,6 +285,6 @@ func (e *Element) AttachShadow(opts AttachShadowOpts) *ShadowRoot {
 }
 
 // InsertAdjacentElement inserts a given element node at a given position relative to the element it is invoked upon.
-func (e *Element) InsertAdjacentElement(position string, newElement *Element) js.Value {
+func (e *Element) InsertAdjacentElement(position Position, newElement *Element) js.Value {
 	return e.v.Call("insertAdjacentElement", position, newElement.v)
 }
