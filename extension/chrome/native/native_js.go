@@ -6,7 +6,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"syscall/js"
+
+	"github.com/dennwc/dom/js"
 )
 
 // NewApp returns a application instance with a name, as specified in the extension manifest.
@@ -32,11 +33,11 @@ func (app *App) Send(o Msg) js.Value {
 		if len(args) != 0 {
 			resp <- args[0]
 		} else {
-			resp <- js.Undefined()
+			resp <- js.Value{}
 		}
 		return nil
 	})
-	js.Global().Get("chrome").Get("runtime").Call("sendNativeMessage", app.name, o, cb)
+	js.Get("chrome").Get("runtime").Call("sendNativeMessage", app.name, o, cb)
 	return <-resp
 }
 
@@ -48,7 +49,7 @@ func (app *App) SendBinary(p []byte) ([]byte, error) {
 	resp := app.Send(Msg{
 		"d": base64.StdEncoding.EncodeToString(p),
 	})
-	if resp == js.Undefined() {
+	if resp.IsUndefined() {
 		return nil, fmt.Errorf("application failed")
 	}
 	return base64.StdEncoding.DecodeString(resp.Get("d").String())
@@ -57,7 +58,7 @@ func (app *App) SendBinary(p []byte) ([]byte, error) {
 // Dial runs a native extension connector to send multiple messages.
 // This is more efficient than App.Send because an extension won't be killed after each received message.
 func (app *App) Dial() (*Conn, error) {
-	port := js.Global().Get("chrome").Get("runtime").Call("connectNative", app.name)
+	port := js.Get("chrome").Get("runtime").Call("connectNative", app.name)
 	c := &Conn{
 		app: app, port: port,
 		r: make(chan js.Value, 1),
@@ -95,11 +96,11 @@ func (c *Conn) disconnect(_ js.Value, _ []js.Value) interface{} {
 // Recv receives a single message.
 func (c *Conn) Recv() (js.Value, error) {
 	if c.err != nil {
-		return js.Undefined(), c.err
+		return js.Value{}, c.err
 	}
 	v, ok := <-c.r
 	if !ok {
-		return js.Undefined(), c.err
+		return js.Value{}, c.err
 	}
 	return v, nil
 }

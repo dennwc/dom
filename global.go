@@ -1,5 +1,3 @@
-//+build wasm,js
-
 package dom
 
 import (
@@ -10,9 +8,17 @@ import (
 
 var (
 	Doc  = GetDocument()
-	Body = Doc.GetElementsByTagName("body")[0]
-	Head = Doc.GetElementsByTagName("head")[0]
+	Body = getFirstWithTag("body")
+	Head = getFirstWithTag("head")
 )
+
+func getFirstWithTag(tag string) *HTMLElement {
+	list := Doc.GetElementsByTagName(tag)
+	if len(list) == 0 {
+		return nil
+	}
+	return list[0].AsHTMLElement()
+}
 
 // Value is an alias for js.Wrapper.
 //

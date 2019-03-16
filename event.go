@@ -1,10 +1,6 @@
-//+build wasm,js
-
 package dom
 
 import (
-	"fmt"
-
 	"github.com/dennwc/dom/js"
 )
 
@@ -39,7 +35,7 @@ type EventConstructor func(e BaseEvent) Event
 func RegisterEventType(typ string, fnc EventConstructor) {
 	cl := js.Get(typ)
 	if !cl.Valid() {
-		panic(fmt.Errorf("class undefined: %q", typ))
+		return
 	}
 	eventClasses = append(eventClasses, eventClass{
 		Class: cl, New: fnc,

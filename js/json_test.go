@@ -23,7 +23,7 @@ func TestValueMarshalJSON(t *testing.T) {
 		var v Value
 		data, err := v.MarshalJSON()
 		require.NoError(t, err)
-		require.Equal(t, jsonUndefined, string(data))
+		require.Equal(t, "null", string(data))
 	})
 }
 

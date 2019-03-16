@@ -1,5 +1,3 @@
-//+build wasm
-
 package dom
 
 import (

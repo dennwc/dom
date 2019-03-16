@@ -1,5 +1,3 @@
-//+build wasm,js
-
 package dom
 
 import "github.com/dennwc/dom/js"
@@ -27,6 +25,8 @@ type Node interface {
 	ReplaceChild(n, old Node) Node
 }
 
+var _ js.Wrapper = NodeBase{}
+
 type NodeList []*Element
 
 type NodeBase struct {
@@ -34,7 +34,8 @@ type NodeBase struct {
 	funcs []js.Func
 }
 
-func (e *NodeBase) JSValue() js.Ref {
+// JSValue implements js.Wrapper.
+func (e NodeBase) JSValue() js.Ref {
 	return e.v.JSValue()
 }
 
