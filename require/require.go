@@ -1,5 +1,3 @@
-//+build wasm,js
-
 package require
 
 import (

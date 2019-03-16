@@ -1,10 +1,16 @@
-//+build wasm,js
-
 package dom
 
 import "github.com/dennwc/dom/js"
 
 // https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement
+
+func (e *Element) AsHTMLElement() *HTMLElement {
+	if e == nil {
+		return nil
+	}
+	// TODO: check if the type matches
+	return &HTMLElement{Element: *e}
+}
 
 type HTMLElement struct {
 	Element

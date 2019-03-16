@@ -23,7 +23,7 @@ func main() {
 
 	handler := func(e dom.Event) {
 		dom.ConsoleLog(e)
-		fmt.Printf("event: %T %v\n", e, e.JSRef())
+		fmt.Printf("event: %T %v\n", e, e.JSValue())
 	}
 
 	inp := dom.Doc.NewInput("text")

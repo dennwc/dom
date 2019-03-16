@@ -1,5 +1,3 @@
-//+build js
-
 package chrome
 
 import "github.com/dennwc/dom/js"
@@ -168,7 +166,7 @@ func (t jsTab) executeScript(obj interface{}) ([]js.Value, error) {
 	id := t.ID()
 	ch := make(chan []js.Value, 1)
 	errc := make(chan error, 1)
-	cb := js.NewCallback(func(args []js.Value) {
+	cb := js.CallbackOf(func(args []js.Value) {
 		err := lastError()
 		if err != nil {
 			errc <- err

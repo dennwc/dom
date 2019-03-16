@@ -1,14 +1,12 @@
-//+build wasm
-
 package storage
 
 import (
-	"syscall/js"
+	"github.com/dennwc/dom/js"
 )
 
 func getStorage(name string) Storage {
-	s := js.Global().Get("window").Get(name)
-	if s == js.Null() || s == js.Undefined() {
+	s := js.Get("window").Get(name)
+	if s.IsNull() || s.IsUndefined() {
 		return nil
 	}
 	return jsStorage{s}
@@ -36,7 +34,7 @@ func (s jsStorage) Key(ind int) string {
 
 func (s jsStorage) GetItem(key string) (string, bool) {
 	v := s.v.Call("getItem", key)
-	if v == js.Null() || v == js.Undefined() {
+	if v.IsNull() || v.IsUndefined() {
 		return "", false
 	}
 	return v.String(), true

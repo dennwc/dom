@@ -1,5 +1,3 @@
-//+build wasm
-
 package svg
 
 import (
@@ -7,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/dennwc/dom"
+	"github.com/dennwc/dom/js"
 )
 
 // NewElement creates a new SVG element.
@@ -33,6 +32,13 @@ func NewFullscreen() *SVG {
 	return New(dom.Perc(100), dom.Vh(98))
 }
 
+var _ js.Wrapper = (*Element)(nil)
+
+// JSValue implements js.Wrapper.
+func (e *Element) JSValue() js.Ref {
+	return e.e.JSValue()
+}
+
 // Element is a common base for SVG elements.
 type Element struct {
 	e *dom.Element
@@ -45,7 +51,7 @@ func (e *Element) SetAttribute(k string, v interface{}) {
 
 // Style returns a style object for this element.
 func (e *Element) Style() *dom.Style {
-	return e.e.Style()
+	return dom.AsStyle(js.Value{Ref: e.JSValue().Get("style")})
 }
 
 // Transform sets a list of transformations for SVG element.

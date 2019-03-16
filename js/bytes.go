@@ -1,10 +1,7 @@
-//+build wasm,js
-
 package js
 
 import (
 	"fmt"
-	"syscall/js"
 )
 
 var _ Wrapper = TypedArray{}
@@ -17,7 +14,7 @@ type TypedArray struct {
 // Release frees up resources allocated for the typed array.
 // The typed array and its buffer must not be accessed after calling Release.
 func (v TypedArray) Release() {
-	js.TypedArray{v.Ref}.Release()
+	releaseTypedArray(v.Ref)
 }
 
 // TypedArrayOf returns a JavaScript typed array backed by the slice's underlying array.
@@ -27,8 +24,8 @@ func (v TypedArray) Release() {
 //
 // TypedArray.Release must be called to free up resources when the typed array will not be used any more.
 func TypedArrayOf(o interface{}) TypedArray {
-	v := js.TypedArrayOf(toJS(o))
-	return TypedArray{Value{v.Value}}
+	v := typedArrayOf(toJS(o))
+	return TypedArray{Value{v}}
 }
 
 var _ Wrapper = (*Memory)(nil)
