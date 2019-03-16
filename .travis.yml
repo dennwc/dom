@@ -11,6 +11,8 @@ services:
 
 matrix:
   fast_finish: true
+  allow_failures:
+    - go: tip
 
 env:
   - GO111MODULE=on GO_TESTPROXY_DEBUG=true
