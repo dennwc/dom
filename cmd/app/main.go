@@ -55,11 +55,14 @@ func main() {
 		Text string  `json:"text"`
 	}
 
-	var (
-		stor       = storage.Local()
-		mu         sync.Mutex
-		sats       []Sat
+	const (
 		storPrefix = "go-wasm-example-"
+	)
+
+	var (
+		stor = storage.Local()
+		mu   sync.Mutex
+		sats []Sat
 	)
 
 	addSatRaw := func(r, orb, hper float64, s string) {
