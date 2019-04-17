@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -54,6 +55,10 @@ func main() {
 		Text string  `json:"text"`
 	}
 
+	const (
+		storPrefix = "go-wasm-example-"
+	)
+
 	var (
 		stor = storage.Local()
 		mu   sync.Mutex
@@ -74,7 +79,7 @@ func main() {
 	addSat := func(r, orb, hper float64, s string) {
 		if stor != nil {
 			sat := JSat{R: r, Orb: orb, HPer: hper, Text: s}
-			id := strconv.Itoa(stor.Length() + 1)
+			id := storPrefix + strconv.Itoa(stor.Length()+1)
 			if err := storage.SetItemJSON(stor, id, sat); err != nil {
 				panic(err)
 			}
@@ -92,6 +97,9 @@ func main() {
 	if stor != nil {
 		for i := 0; i < stor.Length(); i++ {
 			key := stor.Key(i)
+			if !strings.HasPrefix(key, storPrefix) {
+				continue
+			}
 			var s JSat
 			if err := storage.GetItemJSON(stor, key, &s); err != nil {
 				panic(err)
