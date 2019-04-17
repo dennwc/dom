@@ -101,7 +101,6 @@ func main() {
 				continue
 			}
 			var s JSat
-			fmt.Println(stor, key, &s)
 			if err := storage.GetItemJSON(stor, key, &s); err != nil {
 				panic(err)
 			}
