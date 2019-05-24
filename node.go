@@ -25,6 +25,20 @@ type Node interface {
 	ReplaceChild(n, old Node) Node
 }
 
+type NodeType int
+
+//See https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeType#Node_type_constants
+const (
+	ElementNode               NodeType = 1
+	TextNode                  NodeType = 3
+	CDataSectionNode          NodeType = 4
+	ProcessingInstructionNode NodeType = 7
+	CommentNode               NodeType = 8
+	DocumentNode              NodeType = 9
+	DocumentTypeNode          NodeType = 10
+	DocumentFragmentNode      NodeType = 11
+)
+
 var _ js.Wrapper = NodeBase{}
 
 type NodeList []*Element
@@ -68,6 +82,10 @@ func (e *NodeBase) BaseURI() string {
 
 func (e *NodeBase) NodeName() string {
 	return e.v.Get("nodeName").String()
+}
+
+func (e *NodeBase) NodeType() NodeType {
+	return NodeType(e.v.Get("nodeType").Int())
 }
 
 func (e *NodeBase) ChildNodes() NodeList {
