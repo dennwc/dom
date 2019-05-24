@@ -1,6 +1,7 @@
 package js
 
 import (
+	"strings"
 	"sync"
 )
 
@@ -44,13 +45,17 @@ func Class(class string, path ...string) Value {
 	case "Array":
 		return Value{array}
 	}
+	key := class
+	if len(path) != 0 {
+		key = strings.Join(path, ".") + "." + class
+	}
 	mu.RLock()
-	v := classes[class]
+	v := classes[key]
 	mu.RUnlock()
 	if v.isZero() {
 		v = Get(class, path...)
 		mu.Lock()
-		classes[class] = v
+		classes[key] = v
 		mu.Unlock()
 	}
 	return v
