@@ -37,7 +37,7 @@ func Call(name string, args ...interface{}) Value {
 
 // Class searches for a class in global scope.
 // It caches results, so the lookup should be faster than calling Get.
-func Class(class string) Value {
+func Class(class string, path ...string) Value {
 	switch class {
 	case "Object":
 		return Value{object}
@@ -48,7 +48,7 @@ func Class(class string) Value {
 	v := classes[class]
 	mu.RUnlock()
 	if v.isZero() {
-		v = Get(class)
+		v = Get(class, path...)
 		mu.Lock()
 		classes[class] = v
 		mu.Unlock()
