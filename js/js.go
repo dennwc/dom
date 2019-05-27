@@ -1,6 +1,7 @@
 package js
 
 import (
+	"strings"
 	"sync"
 )
 
@@ -37,20 +38,24 @@ func Call(name string, args ...interface{}) Value {
 
 // Class searches for a class in global scope.
 // It caches results, so the lookup should be faster than calling Get.
-func Class(class string) Value {
+func Class(class string, path ...string) Value {
 	switch class {
 	case "Object":
 		return Value{object}
 	case "Array":
 		return Value{array}
 	}
+	key := class
+	if len(path) != 0 {
+		key += "." + strings.Join(path, ".")
+	}
 	mu.RLock()
-	v := classes[class]
+	v := classes[key]
 	mu.RUnlock()
 	if v.isZero() {
-		v = Get(class)
+		v = Get(class, path...)
 		mu.Lock()
-		classes[class] = v
+		classes[key] = v
 		mu.Unlock()
 	}
 	return v
