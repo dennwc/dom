@@ -47,7 +47,7 @@ func Class(class string, path ...string) Value {
 	}
 	key := class
 	if len(path) != 0 {
-		key = strings.Join(path, ".") + "." + class
+		key += "." + strings.Join(path, ".")
 	}
 	mu.RLock()
 	v := classes[key]
