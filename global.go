@@ -10,7 +10,7 @@ var (
 	Doc   = GetDocument()
 	Body  = getFirstWithTag("body")
 	Head  = getFirstWithTag("head")
-	Title = getOrCreateFirstWithTag(Head, "title")
+	Title = getOrCreateFirstWithTag(getFirstWithTag("head"), "title")
 )
 
 func getFirstWithTag(tag string) *HTMLElement {
@@ -25,6 +25,9 @@ func getOrCreateFirstWithTag(parent *HTMLElement, tag string) *HTMLElement {
 	e := getFirstWithTag(tag)
 	if e != nil {
 		return e
+	}
+	if parent == nil {
+		return nil
 	}
 	e = Doc.CreateElement(tag).AsHTMLElement()
 	parent.AppendChild(e)
