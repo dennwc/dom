@@ -7,9 +7,10 @@ import (
 )
 
 var (
-	Doc  = GetDocument()
-	Body = getFirstWithTag("body")
-	Head = getFirstWithTag("head")
+	Doc   = GetDocument()
+	Body  = getFirstWithTag("body")
+	Head  = getFirstWithTag("head")
+	Title = getOrCreateFirstWithTag(getFirstWithTag("head"), "title")
 )
 
 func getFirstWithTag(tag string) *HTMLElement {
@@ -18,6 +19,19 @@ func getFirstWithTag(tag string) *HTMLElement {
 		return nil
 	}
 	return list[0].AsHTMLElement()
+}
+
+func getOrCreateFirstWithTag(parent *HTMLElement, tag string) *HTMLElement {
+	e := getFirstWithTag(tag)
+	if e != nil {
+		return e
+	}
+	if parent == nil {
+		return nil
+	}
+	e = Doc.CreateElement(tag).AsHTMLElement()
+	parent.AppendChild(e)
+	return e
 }
 
 // Value is an alias for js.Wrapper.
